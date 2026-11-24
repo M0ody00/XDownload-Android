@@ -109,7 +109,7 @@ jobs:
           adb shell am instrument -w -r com.xplayer.pro.finalfix.test/androidx.test.runner.AndroidJUnitRunner | tee evidence/instrumentation.txt
           adb logcat -d -s XPlayerTest:I AndroidRuntime:E > evidence/playback-log.txt
           cat evidence/playback-log.txt
-          for image in library view-sort settings about player player-tools player-landscape media-notification; do adb exec-out run-as com.xplayer.pro.finalfix cat files/ui-evidence/$image.png > evidence/$image.png; done
+          for image in library view-sort settings about player player-tools player-landscape media-notification folder-metadata; do adb exec-out run-as com.xplayer.pro.finalfix cat files/ui-evidence/$image.png > evidence/$image.png; done
           grep -E 'OK \(29 tests\)' evidence/instrumentation.txt
           if grep -E 'FAILURES!!!|INSTRUMENTATION_FAILED|Process crashed' evidence/instrumentation.txt; then exit 1; fi
           EOF
