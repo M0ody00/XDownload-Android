@@ -5,9 +5,10 @@ android {
  defaultConfig {
   applicationId 'com.xplayer.pro'
   minSdk 24
+  if (project.hasProperty('phoneAbi')) { ndk { abiFilters project.property('phoneAbi').toString() } }
   targetSdk 34
-  versionCode 5
-  versionName '3.0-preview3'
+  versionCode 6
+  versionName '3.0-rc1'
   testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
  }
  packaging { jniLibs { pickFirsts += ['**/libc++_shared.so'] } }
@@ -19,6 +20,7 @@ dependencies {
  implementation 'androidx.media3:media3-session:1.5.1'
  implementation 'org.videolan.android:libvlc-all:3.6.1'
  implementation 'dev.ffmpegkit-maintained:ffmpeg-kit-audio:8.1.7'
+ implementation 'com.arthenica:smart-exception-java:0.2.1'
  implementation 'androidx.media3:media3-transformer:1.5.1'
  implementation 'androidx.media3:media3-exoplayer-hls:1.5.1'
  implementation 'androidx.media3:media3-exoplayer-dash:1.5.1'

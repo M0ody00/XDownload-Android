@@ -23,7 +23,7 @@ public class BackgroundService extends MediaSessionService {
      Uri uri=i.getData();
      String scheme=uri.getScheme();
      if("file".equals(scheme)||"content".equals(scheme)||"https".equals(scheme)||"http".equals(scheme)||"rtsp".equals(scheme)){
-       Player p=session.getPlayer();p.setMediaItem(new MediaItem.Builder().setUri(uri).setMediaMetadata(new MediaMetadata.Builder().setTitle(i.getStringExtra("title")).build()).build(),Math.max(0,i.getLongExtra("position",0)));p.prepare();p.play();
+       Player p=session.getPlayer();java.util.ArrayList<Uri> q=i.getParcelableArrayListExtra("queue");java.util.ArrayList<MediaItem> list=new java.util.ArrayList<>();list.add(new MediaItem.Builder().setUri(uri).setMediaMetadata(new MediaMetadata.Builder().setTitle(i.getStringExtra("title")).build()).build());if(q!=null)for(Uri u:q){if(!uri.equals(u))list.add(new MediaItem.Builder().setUri(u).build());}p.setMediaItems(list,0,Math.max(0,i.getLongExtra("position",0)));p.setPlaybackSpeed(i.getFloatExtra("speed",1));p.setShuffleModeEnabled(i.getBooleanExtra("shuffle",false));p.prepare();p.play();
      }
      return START_NOT_STICKY;
    }

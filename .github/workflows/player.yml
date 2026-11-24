@@ -1,4 +1,4 @@
-name: Build and test X Player Pro preview 3
+name: Build and test X Player Pro RC 1
 on:
   push:
     branches: [x-player-pro]
@@ -51,6 +51,27 @@ jobs:
           cp app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk candidate/test.apk
           sha256sum candidate/*.apk
           ls -lh candidate/*.apk
+          "$BT/apkanalyzer" --help >/dev/null 2>&1 || true
+          gradle --no-daemon :app:dependencies --configuration debugRuntimeClasspath > candidate/dependencies.txt
+      - name: Build OPPO ARM64 package with same signing key
+        run: |
+          set -e
+          gradle --no-daemon :app:assembleDebug -PphoneAbi=arm64-v8a
+          mkdir -p phone
+          cp app/build/outputs/apk/debug/app-debug.apk phone/XPlayer-Pro-ARM64.apk
+          BT="$ANDROID_HOME/build-tools/35.0.0"
+          "$BT/apksigner" verify --verbose phone/XPlayer-Pro-ARM64.apk
+          "$BT/aapt" dump badging phone/XPlayer-Pro-ARM64.apk | tee phone/badging.txt
+          grep -F "native-code: 'arm64-v8a'" phone/badging.txt
+          unzip -Z1 phone/XPlayer-Pro-ARM64.apk | grep -F "lib/arm64-v8a/libvlc.so"
+          unzip -Z1 phone/XPlayer-Pro-ARM64.apk | grep -F "lib/arm64-v8a/libffmpegkit.so"
+          sha256sum phone/*.apk
+          ls -lh phone/*.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: arm64-build-candidate
+          path: phone/
+          if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
           name: player-test-candidate
@@ -113,6 +134,16 @@ jobs:
           path: candidate
       - uses: actions/upload-artifact@v4
         with:
-          name: XPlayer-Pro-preview3-TESTED
+          name: XPlayer-Pro-RC1-EMULATOR-TESTED
           path: candidate/XPlayer-Pro.apk
+          if-no-files-found: error
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: arm64-build-candidate
+          path: phone
+      - uses: actions/upload-artifact@v4
+        with:
+          name: XPlayer-Pro-RC1-ARM64-DEVICE-TEST-REQUIRED
+          path: phone/XPlayer-Pro-ARM64.apk
           if-no-files-found: error
