@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build X Download Lite ARM64
 on: [workflow_dispatch, push]
 permissions:
   contents: read
@@ -25,10 +25,27 @@ jobs:
         with:
           gradle-version: '8.13'
       - run: gradle --no-daemon :app:assembleDebug --stacktrace
-      - run: '"$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose app/build/outputs/apk/debug/app-debug.apk'
-      - run: cp app/build/outputs/apk/debug/app-debug.apk XDownload.apk
+      - name: Verify APK integrity, signature and Android 11 compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          BT="$ANDROID_HOME/build-tools/35.0.0"
+          unzip -tq "$APK"
+          "$BT/apksigner" verify --verbose --min-sdk-version 30 --max-sdk-version 30 "$APK"
+          "$BT/aapt" dump badging "$APK" > apk-info.txt
+          cat apk-info.txt
+          grep -F "package: name='com.xdownload.mobile.lite'" apk-info.txt
+          grep -F "sdkVersion:'29'" apk-info.txt
+          grep -Fx "native-code: 'arm64-v8a'" apk-info.txt
+          unzip -Z1 "$APK" > apk-files.txt
+          grep -Fx 'lib/arm64-v8a/libpython.so' apk-files.txt
+          grep -Fx 'lib/arm64-v8a/libffmpeg.so' apk-files.txt
+          cp "$APK" XDownload-Lite-ARM64.apk
+          sha256sum XDownload-Lite-ARM64.apk
+          ls -lh XDownload-Lite-ARM64.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: XDownload-APK
-          path: XDownload.apk
+          name: XDownload-Lite-ARM64
+          path: XDownload-Lite-ARM64.apk
           if-no-files-found: error
