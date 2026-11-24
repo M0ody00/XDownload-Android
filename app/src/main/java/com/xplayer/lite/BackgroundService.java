@@ -13,7 +13,7 @@ public class BackgroundService extends MediaSessionService {
  static volatile ExoPlayer active;
  @Override public void onCreate(){
    super.onCreate();
-   ExoPlayer p=new ExoPlayer.Builder(this).build();
+   androidx.media3.datasource.DefaultHttpDataSource.Factory http=new androidx.media3.datasource.DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(false);String ua=ProPrefs.string(this,"user_agent","").trim();if(!ua.isEmpty())http.setUserAgent(ua);ExoPlayer p=new ExoPlayer.Builder(this).setMediaSourceFactory(new androidx.media3.exoplayer.source.DefaultMediaSourceFactory(new androidx.media3.datasource.DefaultDataSource.Factory(this,http))).build();
    p.setAudioAttributes(new AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build(),true);
    p.setHandleAudioBecomingNoisy(ProPrefs.flag(this,"noisy",true));
    p.setWakeMode(C.WAKE_MODE_LOCAL);
