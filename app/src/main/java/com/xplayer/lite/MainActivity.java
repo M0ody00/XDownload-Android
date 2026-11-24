@@ -42,6 +42,11 @@ public class MainActivity extends Activity {
     private LinearLayout header, tools;
     private TextView title,status;
     private Uri current, subtitle;
+    private static final java.util.ArrayList<Uri> libraryQueue=new java.util.ArrayList<>();
+    private boolean fromLibrary=false;
+    static void setLibraryQueue(java.util.List<Uri> list,Uri selected){libraryQueue.clear();libraryQueue.addAll(list);if(!libraryQueue.contains(selected))libraryQueue.add(selected);}
+    private void moveTrack(int step){if(!fromLibrary||current==null)return;int i=libraryQueue.indexOf(current)+step;if(i>=0&&i<libraryQueue.size())openMedia(libraryQueue.get(i),true);else Toast.makeText(this,"لا يوجد ملف آخر",Toast.LENGTH_SHORT).show();}
+
     private String subtitleMime;
     private boolean full=false;
     private float downX,downY,oldBrightness;
@@ -72,6 +77,11 @@ public class MainActivity extends Activity {
         LinearLayout second=new LinearLayout(this);
         Button back=button("−10 ثوانٍ",false), next=button("+10 ثوانٍ",false), fullscreen=button("ملء الشاشة",false), pip=button("عائم",false);
         addButton(second,back);addButton(second,next);addButton(second,fullscreen);addButton(second,pip);tools.addView(second);
+        LinearLayout tracks=new LinearLayout(this);
+        Button previousFile=button("السابق",false),nextFile=button("التالي",false),trackSettings=button("مسارات الصوت",false);
+        addButton(tracks,previousFile);addButton(tracks,nextFile);addButton(tracks,trackSettings);tools.addView(tracks);
+        previousFile.setOnClickListener(v->moveTrack(-1));nextFile.setOnClickListener(v->moveTrack(1));
+        trackSettings.setOnClickListener(v->new androidx.media3.ui.TrackSelectionDialogBuilder(this,"مسارات الصوت",player,C.TRACK_TYPE_AUDIO).build().show());
         root.addView(tools);setContentView(root);
         DefaultRenderersFactory renderers=new DefaultRenderersFactory(this).setEnableDecoderFallback(true);
         player=new ExoPlayer.Builder(this,renderers).build();screen.setPlayer(player);
@@ -81,7 +91,7 @@ public class MainActivity extends Activity {
             @Override public void onPlaybackStateChanged(int state){
                 if(state==Player.STATE_BUFFERING)status.setText("جارٍ تجهيز الملف…");
                 else if(state==Player.STATE_READY)status.setText("الملف جاهز • Ready");
-                else if(state==Player.STATE_ENDED){status.setText("انتهى التشغيل");savePosition();}
+                else if(state==Player.STATE_ENDED){status.setText("انتهى التشغيل");savePosition();if(fromLibrary&&libraryQueue.indexOf(current)>=0&&libraryQueue.indexOf(current)<libraryQueue.size()-1)moveTrack(1);}
             }
             @Override public void onIsPlayingChanged(boolean playing){
                 if(playing){getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);status.setText("جارٍ التشغيل");}
@@ -97,7 +107,7 @@ public class MainActivity extends Activity {
         next.setOnClickListener(v->{long d=player.getDuration();long p=player.getCurrentPosition()+10000;player.seekTo(d>0?Math.min(d,p):p);});
         fullscreen.setOnClickListener(v->setFullscreen(!full));
         pip.setOnClickListener(v->enterPip());
-        if(state!=null && state.getString("uri")!=null){current=Uri.parse(state.getString("uri"));openMedia(current,false);player.seekTo(state.getLong("position"));player.setPlayWhenReady(state.getBoolean("play"));}
+        if(state!=null && state.getString("uri")!=null){fromLibrary=getIntent().getBooleanExtra("library",false);current=Uri.parse(state.getString("uri"));openMedia(current,false);player.seekTo(state.getLong("position"));player.setPlayWhenReady(state.getBoolean("play"));}
         else handle(getIntent());
     }
     private void pick(boolean text){
@@ -126,7 +136,7 @@ public class MainActivity extends Activity {
     }
     @Override protected void onNewIntent(Intent i){super.onNewIntent(i);setIntent(i);handle(i);}
     private void handle(Intent i){
-        if(i==null)return;Uri u=null;
+        if(i==null)return;fromLibrary=i.getBooleanExtra("library",false);Uri u=null;
         if(Intent.ACTION_VIEW.equals(i.getAction()))u=i.getData();
         else if(Intent.ACTION_SEND.equals(i.getAction()))u=i.getParcelableExtra(Intent.EXTRA_STREAM);
         if(u!=null && ("content".equals(u.getScheme())||"file".equals(u.getScheme())))openMedia(u,true);
