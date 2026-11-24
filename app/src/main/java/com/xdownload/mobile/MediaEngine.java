@@ -23,21 +23,24 @@ final class MediaEngine{
  static boolean playable(JSONObject f){return !id(f).isEmpty()&&!f.optBoolean("has_drm",false)&&!f.optString("protocol","").startsWith("mhtml")&&!f.optString("ext","").equals("mhtml");}
  static long length(JSONObject f,double duration){long exact=f.optLong("filesize",-1);if(exact>0)return exact;long est=f.optLong("filesize_approx",-1);if(est>0)return est;double rate=f.optDouble("tbr",0);if(rate<=0)rate=f.optDouble("abr",0);return duration>0&&rate>0?(long)(duration*rate*125):-1;}
  static boolean estimated(JSONObject f){return f.optLong("filesize",-1)<=0;}
+ static boolean audioExt(String ext){return ext.matches("mp3|m4a|aac|flac|ogg|opus|wav|wave|weba|aiff|aif|wma");}
+ static boolean video(JSONObject f){if(audioExt(ext(f)))return false;String v=f.optString("vcodec","");if(v.equals("none"))return false;return codec(v)||ext(f).matches("mp4|mkv|webm|mov|avi|m4v|flv|ts")&&!f.has("vcodec");}
+ static boolean audio(JSONObject f){String a=f.optString("acodec","");return codec(a)||audioExt(ext(f))||!f.has("acodec")&&video(f);}
  static String ext(JSONObject f){String x=f.optString("ext","");return x.matches("[a-zA-Z0-9]{1,8}")?x.toLowerCase(Locale.ROOT):"bin";}
  static String mime(String ext,boolean audio){if(audio){if(ext.equals("mp3"))return "audio/mpeg";if(ext.equals("m4a"))return "audio/mp4";if(ext.equals("webm"))return "audio/webm";if(ext.equals("opus")||ext.equals("ogg"))return "audio/ogg";if(ext.equals("wav"))return "audio/wav";return "audio/"+ext;}if(ext.equals("mkv"))return "video/x-matroska";return "video/"+ext;}
  static Result parse(JSONObject info)throws Exception{
   if(info.optBoolean("has_drm",false)||info.optJSONArray("entries")!=null)throw new IOException("Protected media or playlists are not supported");
   double duration=info.optDouble("duration",0);JSONArray formats=info.optJSONArray("formats");if(formats==null){formats=new JSONArray();formats.put(info);}
-  ArrayList<JSONObject> all=new ArrayList<>(),audios=new ArrayList<>();for(int i=0;i<formats.length();i++){JSONObject x=formats.optJSONObject(i);if(x==null||!playable(x))continue;all.add(x);if(!codec(x.optString("vcodec"))&&codec(x.optString("acodec")))audios.add(x);}
+  ArrayList<JSONObject> all=new ArrayList<>(),audios=new ArrayList<>();for(int i=0;i<formats.length();i++){JSONObject x=formats.optJSONObject(i);if(x==null)continue;if(x.optString("ext").equals("wav")&&x.optString("format_id").isEmpty())x.put("format_id","best");if(!playable(x))continue;all.add(x);if(!video(x)&&audio(x))audios.add(x);}
   audios.sort((a,b)->Double.compare(b.optDouble("abr",b.optDouble("tbr",0)),a.optDouble("abr",a.optDouble("tbr",0))));
   LinkedHashMap<String,Choice> videos=new LinkedHashMap<>(),audioChoices=new LinkedHashMap<>();
   all.sort((a,b)->{int h=Integer.compare(b.optInt("height"),a.optInt("height"));return h!=0?h:Double.compare(b.optDouble("tbr",0),a.optDouble("tbr",0));});
-  for(JSONObject x:all){boolean v=codec(x.optString("vcodec")),a=codec(x.optString("acodec"));if(!x.has("vcodec")&&!x.has("acodec")){String ext=ext(x);v=ext.matches("mp4|mkv|webm|mov|avi|m4v");a=v||ext.matches("mp3|m4a|aac|flac|ogg|opus|wav");}if(!v&&!a)continue;String extension=ext(x),selector=id(x);long bytes=length(x,duration);boolean approx=estimated(x);if(v){
+  for(JSONObject x:all){boolean v=video(x),a=audio(x);if(!v&&!a)continue;String extension=ext(x),selector=id(x);long bytes=length(x,duration);boolean approx=estimated(x);if(v){
     if(!a){JSONObject best=null;for(JSONObject au:audios){if((extension.equals("mp4")&&ext(au).equals("m4a"))||(extension.equals("webm")&&ext(au).equals("webm"))){best=au;break;}}if(best==null&&!audios.isEmpty())best=audios.get(0);if(best==null)continue;selector+="+"+id(best);long audioSize=length(best,duration);bytes=bytes>0&&audioSize>0?bytes+audioSize:-1;approx=true;if(!((extension.equals("mp4")&&ext(best).equals("m4a"))||(extension.equals("webm")&&ext(best).equals("webm"))))extension="mkv";}
     int height=x.optInt("height",0),fps=(int)Math.round(x.optDouble("fps",0));String label=(height>0?height+"p":"Original")+(fps>=50?" "+fps+"fps":"")+" · "+extension.toUpperCase(Locale.ROOT);String key=label;if(!videos.containsKey(key))videos.put(key,new Choice(selector,extension,mime(extension,false),label,bytes,approx,false,false));
    }else{int kbps=(int)Math.round(x.optDouble("abr",x.optDouble("tbr",0)));String label=(kbps>0?kbps+" kbps":"Original")+" · "+extension.toUpperCase(Locale.ROOT);if(!audioChoices.containsKey(label))audioChoices.put(label,new Choice(selector,extension,mime(extension,true),label,bytes,approx,true,false));}
   }
-  JSONObject bestAudio=!audios.isEmpty()?audios.get(0):null;if(bestAudio==null)for(JSONObject x:all)if(codec(x.optString("acodec"))||!x.has("acodec")&&ext(x).matches("mp4|m4v|mp3|m4a|wav|ogg|flac")){bestAudio=x;break;}
+  JSONObject bestAudio=!audios.isEmpty()?audios.get(0):null;if(bestAudio==null)for(JSONObject x:all)if(audio(x)){bestAudio=x;break;}
   if(bestAudio!=null)for(int rate:new int[]{128,192,320})audioChoices.put("mp3-"+rate,new Choice(id(bestAudio),"mp3","audio/mpeg","MP3 · "+rate+" kbps",duration>0?(long)(duration*rate*125):-1,true,true,true));
   ArrayList<Choice> result=new ArrayList<>(videos.values());result.addAll(audioChoices.values());if(result.isEmpty())throw new IOException("No supported downloadable audio/video formats found");return new Result(HttpEngine.safeName(info.optString("title","Media")),duration,result);
  }

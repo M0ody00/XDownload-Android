@@ -3,12 +3,12 @@ android {
  namespace 'com.xdownload.mobile'
  compileSdk 36
  defaultConfig {
-  applicationId 'com.xdownload.pro.media'
+  applicationId 'com.xdownload.pro.next'
   minSdk 29
   if (project.hasProperty('phoneAbi')) { ndk { abiFilters project.property('phoneAbi').toString() } }
   targetSdk 34
-  versionCode 3
-  versionName '1.1-rc3'
+  versionCode 4
+  versionName '2.0-rc1'
   testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
  }
  packaging { jniLibs { useLegacyPackaging = true; pickFirsts += ['**/libc++_shared.so'] } }
