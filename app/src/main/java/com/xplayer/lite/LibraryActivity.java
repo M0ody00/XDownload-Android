@@ -41,6 +41,7 @@ public class LibraryActivity extends Activity {
     private volatile boolean dead=false;
     private String folder=null, keyword="";
     private int collection=0;
+    private final HashSet<String> favoriteSet=new HashSet<>();
     private final Runnable refreshTask=()->refresh();
     private final ContentObserver observer=new ContentObserver(handler){@Override public void onChange(boolean self){handler.removeCallbacks(refreshTask);handler.postDelayed(refreshTask,350);}};
     static final class Media {
@@ -139,6 +140,7 @@ public class LibraryActivity extends Activity {
     private Comparator<Media> comparator(){return (a,b)->{int c=0;switch(sort){case 1:c=Long.compare(b.date,a.date);break;case 2:c=Long.compare(b.size,a.size);break;case 3:c=Long.compare(b.duration,a.duration);break;default:break;}return c!=0?c:a.name.compareToIgnoreCase(b.name);};}
     private void render(){
         if(adapter==null)return;
+        favoriteSet.clear();favoriteSet.addAll(ProPrefs.list(this,"favorites"));
         for(int i=0;i<tabs.length;i++){tabs[i].setBackground(shape(i==tab?ACCENT:PANEL));tabs[i].setTextColor(i==tab?BG:INK);}
         ArrayList<Media> selected=new ArrayList<>();ArrayList<String> groupUris=collection==0?null:ProPrefs.list(this,collection==1?"favorites":"history");String[] excluded=ProPrefs.get(this).getString("excluded","").toLowerCase(Locale.ROOT).split("\\r?\\n");for(Media m:items){if(groupUris!=null&&!groupUris.contains(m.uri.toString()))continue;boolean hidden=false;for(String x:excluded)if(!x.trim().isEmpty()&&m.path.toLowerCase(Locale.ROOT).contains(x.trim())){hidden=true;break;}if(hidden)continue;if(tab==VIDEO&&!m.video||tab==AUDIO&&m.video)continue;if(folder!=null&&!folder.equals(m.key()))continue;if(!keyword.isEmpty()&&!m.name.toLowerCase(Locale.ROOT).contains(keyword)&&!m.path.toLowerCase(Locale.ROOT).contains(keyword))continue;selected.add(m);}
         if(collection==2)Collections.sort(selected,(a,b)->Integer.compare(groupUris.indexOf(a.uri.toString()),groupUris.indexOf(b.uri.toString())));else Collections.sort(selected,comparator());rows.clear();
@@ -182,7 +184,7 @@ public class LibraryActivity extends Activity {
                 TextView name=text("",15,INK);name.setMaxLines(2);name.setEllipsize(android.text.TextUtils.TruncateAt.END);labels.addView(name);TextView detail=text("",12,MUTED);detail.setMaxLines(2);labels.addView(detail);
                 h=new Holder();h.icon=icon;h.image=image;h.name=name;h.detail=detail;layout.setTag(h);convert=layout;
             }else h=(Holder)convert.getTag();
-            h.name.setText(r.media!=null&&ProPrefs.favorite(LibraryActivity.this,r.media.uri)?"♥ "+r.name:r.name);h.detail.setText(r.detail);h.image.setImageDrawable(null);h.image.setVisibility(View.GONE);h.icon.setVisibility(View.VISIBLE);h.icon.setText(r.media==null?"▰":r.media.video?"▶":"♪");h.image.setTag(null);
+            h.name.setText(r.media!=null&&favoriteSet.contains(r.media.uri.toString())?"♥ "+r.name:r.name);h.detail.setText(r.detail);h.image.setImageDrawable(null);h.image.setVisibility(View.GONE);h.icon.setVisibility(View.VISIBLE);h.icon.setText(r.media==null?"▰":r.media.video?"▶":"♪");h.image.setTag(null);
             if(ProPrefs.flag(LibraryActivity.this,"thumbnails",true)&&r.media!=null&&r.media.video&&Build.VERSION.SDK_INT>=29){Uri u=r.media.uri;String k=u.toString()+":"+r.media.date;h.image.setTag(k);Bitmap hit=cache.get(k);if(hit!=null){h.image.setImageBitmap(hit);h.image.setVisibility(View.VISIBLE);h.icon.setVisibility(View.GONE);}else if(!dead){final Holder holder=h;try{thumbnails.execute(()->{if(dead)return;try{Bitmap bitmap=getContentResolver().loadThumbnail(u,new Size(160,100),null);if(bitmap==null||dead)return;cache.put(k,bitmap);runOnUiThread(()->{if(!dead&&k.equals(holder.image.getTag())){holder.image.setImageBitmap(bitmap);holder.image.setVisibility(View.VISIBLE);holder.icon.setVisibility(View.GONE);}});}catch(Exception ignored){}});}catch(RejectedExecutionException ignored){}}}
             return convert;
         }
