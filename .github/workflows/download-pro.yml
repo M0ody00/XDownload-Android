@@ -30,7 +30,12 @@ jobs:
       - name: Generate synthetic audio fixture
         run: |
           mkdir -p app/src/androidTest/assets
-          ffmpeg -hide_banner -loglevel error -y -f lavfi -i sine=frequency=440:sample_rate=44100 -t 2 -c:a pcm_s16le app/src/androidTest/assets/sample.wav
+          python3 - <<'PY'
+          import wave, math, struct
+          with wave.open('app/src/androidTest/assets/sample.wav', 'wb') as f:
+              f.setparams((1, 2, 44100, 0, 'NONE', 'not compressed'))
+              f.writeframes(b''.join(struct.pack('<h', int(12000*math.sin(2*math.pi*440*i/44100))) for i in range(88200)))
+          PY
       - run: gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace
       - run: |
           mkdir -p candidate
