@@ -68,7 +68,7 @@ public class MainActivity extends Activity {
     private LoudnessEnhancer boost;
     private int effectSession=-1;
     private final Handler handler=new Handler(Looper.getMainLooper());
-    private final Runnable clock=new Runnable(){public void run(){if(player==null)return;if(sleepUntil>0&&android.os.SystemClock.elapsedRealtime()>=sleepUntil){sleepUntil=0;player.pause();status.setText("انتهى مؤقت النوم");}if(aPoint>=0&&bPoint>aPoint&&player.getCurrentPosition()>=bPoint)player.seekTo(aPoint);handler.postDelayed(this,200);}};
+    private final Runnable clock=new Runnable(){public void run(){if(player==null)return;if(sleepUntil>0&&android.os.SystemClock.elapsedRealtime()>=sleepUntil){sleepUntil=0;player.pause();status.setText("انتهى مؤقت النوم");}if(aPoint>=0&&bPoint>aPoint&&player.getCurrentPosition()>=bPoint)player.seekTo(aPoint);handler.postDelayed(this,ProPrefs.flag(MainActivity.this,"lite_mode",false)&&bPoint<0?1000:200);}};
     private long stepMs(){int[] steps={5,10,15,30};return steps[Math.max(0,Math.min(3,ProPrefs.number(this,"seek",1)))]*1000L;}
     private void seekBy(long d){long end=player.getDuration(),n=Math.max(0,player.getCurrentPosition()+d);player.seekTo(end>0?Math.min(end,n):n);}
 
@@ -120,7 +120,7 @@ public class MainActivity extends Activity {
                 else if(state==Player.STATE_ENDED){status.setText("انتهى التشغيل");savePosition();if(ProPrefs.flag(MainActivity.this,"auto_next",true)&&fromLibrary&&libraryQueue.indexOf(current)>=0&&(shuffle&&libraryQueue.size()>1||libraryQueue.indexOf(current)<libraryQueue.size()-1))moveTrack(1);}
             }
             @Override public void onIsPlayingChanged(boolean playing){
-                if(playing){if(ProPrefs.flag(MainActivity.this,"keep_screen",true))getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);status.setText("جارٍ التشغيل");}
+                if(playing){if(ProPrefs.flag(MainActivity.this,"keep_screen",true)&&!ProPrefs.flag(MainActivity.this,"lite_mode",false))getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);status.setText("جارٍ التشغيل");}
                 else {getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);if(player.getPlaybackState()==Player.STATE_READY)status.setText("متوقف مؤقتًا");}
             }
             @Override public void onRenderedFirstFrame(){renderedFrame=true;}
@@ -169,7 +169,7 @@ public class MainActivity extends Activity {
         if(u!=null){String s=u.getScheme();boolean local="content".equals(s)||"file".equals(s);boolean remote=i.getBooleanExtra("network",false)&&u.getHost()!=null&&("https".equalsIgnoreCase(s)||"rtsp".equalsIgnoreCase(s)||("http".equalsIgnoreCase(s)&&ProPrefs.flag(this,"http",false)));if(local||remote)openMedia(u,true);}
     }
     void openMedia(Uri u,boolean resume){
-        stopService(new Intent(this,BackgroundService.class));savePosition();fallbackAttempted=false;current=u;subtitle=null;subtitleMime=null;aPoint=bPoint=-1;title.setText(displayName(u));ProPrefs.record(this,u);
+        stopService(new Intent(this,BackgroundService.class));savePosition();fallbackAttempted=false;current=u;subtitle=null;subtitleMime=null;if(ProPrefs.flag(this,"auto_subtitle",true)){Uri found=TreeScanner.subtitleFor(this,u);if(found!=null){String ext=TreeScanner.extension(displayName(found));if("srt".equals(ext))subtitleMime=MimeTypes.APPLICATION_SUBRIP;else if("ass".equals(ext)||"ssa".equals(ext))subtitleMime=MimeTypes.TEXT_SSA;else if("vtt".equals(ext))subtitleMime=MimeTypes.TEXT_VTT;if(subtitleMime!=null)subtitle=found;}}aPoint=bPoint=-1;title.setText(displayName(u));ProPrefs.record(this,u);
         long pos=resume&&ProPrefs.flag(this,"resume",true)?getPreferences(MODE_PRIVATE).getLong("p:"+u,0):0;
         prepare(u,pos,ProPrefs.flag(this,"autoplay",true));
     }
