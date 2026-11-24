@@ -15,7 +15,7 @@ final class MediaEngine{
  }
  static final class Result{final String title;final double duration;final ArrayList<Choice> choices;Result(String title,double duration,ArrayList<Choice> choices){this.title=title;this.duration=duration;this.choices=choices;}}
  private static boolean ready=false;
- static synchronized void init(Context context)throws Exception{if(ready)return;YoutubeDL.getInstance().init(context.getApplicationContext());FFmpeg.getInstance().init(context.getApplicationContext());ready=true;}
+ static synchronized void init(Context context)throws Exception{if(ready)return;try{YoutubeDL.getInstance().init(context.getApplicationContext());FFmpeg.getInstance().init(context.getApplicationContext());ready=true;}catch(LinkageError e){throw new IOException("Media engine incompatible with this device",e);}}
  static YoutubeDLRequest request(String link){YoutubeDLRequest req=new YoutubeDLRequest(link);req.addOption("--no-playlist");req.addOption("--ignore-config");req.addOption("--socket-timeout","15");req.addOption("--retries","2");req.addOption("--no-warnings");return req;}
  static Result analyze(Context c,String url)throws Exception{init(c);YoutubeDLRequest req=request(url);req.addOption("--dump-single-json");req.addOption("--skip-download");JSONObject info=new JSONObject(YoutubeDL.getInstance().execute(req,null,null).getOut().trim());return parse(info);}
  static boolean codec(String c){return c!=null&&!c.isEmpty()&&!c.equals("none")&&!c.equals("null");}
@@ -41,10 +41,11 @@ final class MediaEngine{
   if(bestAudio!=null)for(int rate:new int[]{128,192,320})audioChoices.put("mp3-"+rate,new Choice(id(bestAudio),"mp3","audio/mpeg","MP3 · "+rate+" kbps",duration>0?(long)(duration*rate*125):-1,true,true,true));
   ArrayList<Choice> result=new ArrayList<>(videos.values());result.addAll(audioChoices.values());if(result.isEmpty())throw new IOException("No supported downloadable audio/video formats found");return new Result(HttpEngine.safeName(info.optString("title","Media")),duration,result);
  }
+ static int mp3Rate(Choice choice){if(!choice.mp3)return 0;if(choice.label.contains("320 kbps"))return 320;if(choice.label.contains("192 kbps"))return 192;return 128;}
  static File transfer(Context c,Store.Job job,HttpEngine.Observer observer)throws Exception{
   init(c);if(!job.selector.matches("[A-Za-z0-9_.-]{1,100}(\\+[A-Za-z0-9_.-]{1,100})?")||!job.extension.matches("[a-z0-9]{1,8}"))throw new IOException("Invalid media format");
   File dir=new File(c.getFilesDir(),"media-"+job.id);if(!dir.isDirectory()&&!dir.mkdirs())throw new IOException("Cannot create media directory");
-  YoutubeDLRequest req=request(job.url);req.addOption("-f",job.selector);req.addOption("--continue");req.addOption("--no-mtime");req.addOption("--no-overwrites");req.addOption("--fragment-retries","3");req.addOption("--concurrent-fragments","2");req.addOption("--newline");req.addOption("-o",new File(dir,"media.%(ext)s").getAbsolutePath());
+  YoutubeDLRequest req=request(job.url);req.addOption("-f",job.selector);req.addOption("--continue");req.addOption("--no-mtime");req.addOption("--no-overwrites");req.addOption("--no-post-overwrites");req.addOption("--fragment-retries","3");req.addOption("--concurrent-fragments","2");req.addOption("--newline");req.addOption("-o",new File(dir,"media.%(ext)s").getAbsolutePath());
   if(job.mp3Rate>0){req.addOption("-x");req.addOption("--audio-format","mp3");req.addOption("--audio-quality",job.mp3Rate+"K");}
   else if(job.selector.contains("+"))req.addOption("--merge-output-format",job.extension);
   AtomicBoolean finished=new AtomicBoolean(false);Thread monitor=new Thread(()->{while(!finished.get()){if(!observer.proceed()){YoutubeDL.getInstance().destroyProcessById(job.id);}try{Thread.sleep(300);}catch(InterruptedException e){return;}}},"media-monitor");monitor.start();
