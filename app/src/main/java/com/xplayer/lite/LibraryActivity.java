@@ -37,7 +37,8 @@ public class LibraryActivity extends Activity {
     private EditText search;
     private RowAdapter adapter;
     private int tab=VIDEO, sort=0, generation=0;
-    private boolean folders=true, observing=false, dead=false;
+    private boolean folders=true, observing=false;
+    private volatile boolean dead=false;
     private String folder=null, keyword="";
     private final Runnable refreshTask=()->refresh();
     private final ContentObserver observer=new ContentObserver(handler){@Override public void onChange(boolean self){handler.removeCallbacks(refreshTask);handler.postDelayed(refreshTask,350);}};
@@ -104,7 +105,7 @@ public class LibraryActivity extends Activity {
     void refresh(){
         if(dead)return;
         permission.setVisibility(fullRead()?View.GONE:View.VISIBLE);
-        if(!canRead()){items.clear();render();summary.setText("اسمح بالوصول لفحص مكتبة الهاتف، أو افتح ملفًا يدويًا.");return;}
+        if(!canRead()){generation++;items.clear();render();summary.setText("اسمح بالوصول لفحص مكتبة الهاتف، أو افتح ملفًا يدويًا.");return;}
         final int id=++generation;final boolean video=canVideo(),audio=canAudio();summary.setText("جارٍ فحص ملفات الهاتف…");
         scanner.execute(()->{ArrayList<Media> result=new ArrayList<>();boolean error=false;if(video)error|=!query(true,result);if(audio)error|=!query(false,result);final boolean failed=error;
             runOnUiThread(()->{if(dead||id!=generation)return;items.clear();items.addAll(result);render();if(failed)summary.append(" • بعض الملفات غير متاحة");});});
@@ -129,7 +130,7 @@ public class LibraryActivity extends Activity {
     private String folderName(String p){String q=p.replaceAll("/+$","");int i=q.lastIndexOf('/');return q.isEmpty()?"التخزين الرئيسي":q.substring(i+1);}
     private String duration(long ms){long s=Math.max(0,ms/1000);return s>=3600?String.format(Locale.ROOT,"%d:%02d:%02d",s/3600,(s/60)%60,s%60):String.format(Locale.ROOT,"%d:%02d",s/60,s%60);}
     private String size(long bytes){return android.text.format.Formatter.formatShortFileSize(this,Math.max(0,bytes));}
-    private Comparator<Media> comparator(){Comparator<Media> n=Comparator.comparing(m->m.name.toLowerCase(Locale.ROOT));switch(sort){case 1:return Comparator.<Media>comparingLong(m->m.date).reversed().thenComparing(n);case 2:return Comparator.<Media>comparingLong(m->m.size).reversed().thenComparing(n);case 3:return Comparator.<Media>comparingLong(m->m.duration).reversed().thenComparing(n);default:return n;}}
+    private Comparator<Media> comparator(){return (a,b)->{int c=0;switch(sort){case 1:c=Long.compare(b.date,a.date);break;case 2:c=Long.compare(b.size,a.size);break;case 3:c=Long.compare(b.duration,a.duration);break;default:break;}return c!=0?c:a.name.compareToIgnoreCase(b.name);};}
     private void render(){
         if(adapter==null)return;
         for(int i=0;i<tabs.length;i++){tabs[i].setBackground(shape(i==tab?ACCENT:PANEL));tabs[i].setTextColor(i==tab?BG:INK);}
@@ -139,7 +140,7 @@ public class LibraryActivity extends Activity {
         if(group){
             LinkedHashMap<String,ArrayList<Media>> map=new LinkedHashMap<>();for(Media m:selected){ArrayList<Media> bucket=map.get(m.key());if(bucket==null){bucket=new ArrayList<>();map.put(m.key(),bucket);}bucket.add(m);}
             for(Map.Entry<String,ArrayList<Media>> e:map.entrySet()){ArrayList<Media> a=e.getValue();Media m=a.get(0);rows.add(new Row(null,e.getKey(),folderName(m.path),m.path+"  •  "+a.size()+" ملف",a.size()));}
-            if(sort==0)Collections.sort(rows,Comparator.comparing(r->r.name.toLowerCase(Locale.ROOT)));
+            if(sort==0)Collections.sort(rows,(a,b)->a.name.compareToIgnoreCase(b.name));
         }else for(Media m:selected)rows.add(new Row(m,m.key(),m.name,duration(m.duration)+"  •  "+size(m.size)+"  •  "+folderName(m.path),1));
         String location="المجلدات";if(folder!=null){int sep=folder.indexOf('|');location="‹ "+folderName(sep<0?folder:folder.substring(sep+1));}else if(!group)location="الملفات";
         crumb.setText(location);modeButton.setText(folder!=null?"رجوع للمجلدات":folders?"عرض الملفات":"عرض المجلدات");
