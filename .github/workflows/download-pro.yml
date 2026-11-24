@@ -76,5 +76,5 @@ jobs:
           path: candidate
       - uses: actions/upload-artifact@v4
         with:
-          name: XDownload-Pro-RC1-TESTED
+          name: XDownload-Pro-RC2-TESTED
           path: candidate/XDownload-Pro.apk

@@ -10,6 +10,7 @@ android {
   versionName '1.0-rc2'
   testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
  }
+ packaging { jniLibs { pickFirsts += ['**/libc++_shared.so'] } }
  compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
  if (System.getenv('XDOWNLOAD_KEYSTORE')) {
   signingConfigs { persistent { storeFile file(System.getenv('XDOWNLOAD_KEYSTORE')); storePassword System.getenv('XDOWNLOAD_STORE_PASSWORD'); keyAlias System.getenv('XDOWNLOAD_KEY_ALIAS'); keyPassword System.getenv('XDOWNLOAD_KEY_PASSWORD') } }
@@ -17,6 +18,9 @@ android {
  }
 }
 dependencies {
+ implementation 'androidx.media3:media3-transformer:1.5.1'
+ implementation 'dev.ffmpegkit-maintained:ffmpeg-kit-audio:8.1.7'
+ implementation 'com.arthenica:smart-exception-java:0.2.1'
  testImplementation 'junit:junit:4.13.2'
  androidTestImplementation 'androidx.test:runner:1.6.2'
  androidTestImplementation 'androidx.test.ext:junit:1.2.1'
