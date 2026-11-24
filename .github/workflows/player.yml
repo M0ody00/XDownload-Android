@@ -1,4 +1,4 @@
-name: Build and test X Player Pro 3.3 media controls RC1
+name: Build and test X Player Pro 3.3.1 install compatibility
 on:
   push:
     branches: [x-player-pro]
@@ -42,9 +42,9 @@ jobs:
           APK=app/build/outputs/apk/debug/app-debug.apk
           BT="$ANDROID_HOME/build-tools/35.0.0"
           unzip -tq "$APK"
-          "$BT/apksigner" verify --verbose "$APK"
+          "$BT/apksigner" verify --verbose --print-certs "$APK"
           "$BT/aapt" dump badging "$APK" | tee apk-info.txt
-          grep -F "package: name='com.xplayer.pro'" apk-info.txt
+          grep -F "package: name='com.xplayer.pro.installfix'" apk-info.txt
           grep -F "sdkVersion:'24'" apk-info.txt
           mkdir -p candidate
           cp "$APK" candidate/XPlayer-Pro.apk
@@ -60,11 +60,14 @@ jobs:
           mkdir -p phone
           cp app/build/outputs/apk/debug/app-debug.apk phone/XPlayer-Pro-ARM64.apk
           BT="$ANDROID_HOME/build-tools/35.0.0"
-          "$BT/apksigner" verify --verbose phone/XPlayer-Pro-ARM64.apk
+          "$BT/apksigner" verify --verbose --print-certs phone/XPlayer-Pro-ARM64.apk
           "$BT/aapt" dump badging phone/XPlayer-Pro-ARM64.apk | tee phone/badging.txt
           grep -F "native-code: 'arm64-v8a'" phone/badging.txt
           unzip -Z1 phone/XPlayer-Pro-ARM64.apk | grep -F "lib/arm64-v8a/libvlc.so"
           unzip -Z1 phone/XPlayer-Pro-ARM64.apk | grep -F "lib/arm64-v8a/libffmpegkit.so"
+          "$BT/apksigner" verify --print-certs phone/XPlayer-Pro-ARM64.apk > phone/certificate.txt
+          "$BT/apksigner" verify --print-certs candidate/XPlayer-Pro.apk > candidate/certificate.txt
+          diff <(grep "certificate SHA-256 digest:" phone/certificate.txt) <(grep "certificate SHA-256 digest:" candidate/certificate.txt)
           sha256sum phone/*.apk
           ls -lh phone/*.apk
       - uses: actions/upload-artifact@v4
@@ -103,10 +106,10 @@ jobs:
           mkdir -p evidence
           adb install -g candidate/XPlayer-Pro.apk
           adb install -t candidate/test.apk
-          adb shell am instrument -w -r com.xplayer.pro.test/androidx.test.runner.AndroidJUnitRunner | tee evidence/instrumentation.txt
+          adb shell am instrument -w -r com.xplayer.pro.installfix.test/androidx.test.runner.AndroidJUnitRunner | tee evidence/instrumentation.txt
           adb logcat -d -s XPlayerTest:I AndroidRuntime:E > evidence/playback-log.txt
           cat evidence/playback-log.txt
-          for image in library view-sort settings about player player-tools player-landscape media-notification; do adb exec-out run-as com.xplayer.pro cat files/ui-evidence/$image.png > evidence/$image.png; done
+          for image in library view-sort settings about player player-tools player-landscape media-notification; do adb exec-out run-as com.xplayer.pro.installfix cat files/ui-evidence/$image.png > evidence/$image.png; done
           grep -E 'OK \(26 tests\)' evidence/instrumentation.txt
           if grep -E 'FAILURES!!!|INSTRUMENTATION_FAILED|Process crashed' evidence/instrumentation.txt; then exit 1; fi
           EOF
@@ -135,7 +138,7 @@ jobs:
           path: candidate
       - uses: actions/upload-artifact@v4
         with:
-          name: XPlayer-Pro-3.3-RC1-EMULATOR-TESTED
+          name: XPlayer-Pro-3.3.1-INSTALLFIX-EMULATOR-TESTED
           path: candidate/XPlayer-Pro.apk
           if-no-files-found: error
 
@@ -145,6 +148,6 @@ jobs:
           path: phone
       - uses: actions/upload-artifact@v4
         with:
-          name: XPlayer-Pro-3.3-RC1-ARM64-DEVICE-TEST-REQUIRED
+          name: XPlayer-Pro-3.3.1-INSTALLFIX-ARM64-DEVICE-TEST-REQUIRED
           path: phone/XPlayer-Pro-ARM64.apk
           if-no-files-found: error
