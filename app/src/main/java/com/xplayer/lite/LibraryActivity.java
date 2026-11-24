@@ -40,6 +40,7 @@ public class LibraryActivity extends Activity {
     private boolean folders=true, observing=false;
     private volatile boolean dead=false;
     private String folder=null, keyword="";
+    private int collection=0;
     private final Runnable refreshTask=()->refresh();
     private final ContentObserver observer=new ContentObserver(handler){@Override public void onChange(boolean self){handler.removeCallbacks(refreshTask);handler.postDelayed(refreshTask,350);}};
     static final class Media {
@@ -60,12 +61,17 @@ public class LibraryActivity extends Activity {
         super.onCreate(b);
         getWindow().setStatusBarColor(BG);getWindow().setNavigationBarColor(BG);
         LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(BG);root.setPadding(dp(10),dp(8),dp(10),dp(6));setContentView(root);
-        TextView heading=text("X PLAYER LITE",25,ACCENT);heading.setTypeface(null,Typeface.BOLD);heading.setPadding(dp(6),dp(6),0,dp(4));root.addView(heading);
+        TextView heading=text("X PLAYER PRO",25,ACCENT);heading.setTypeface(null,Typeface.BOLD);heading.setPadding(dp(6),dp(6),0,dp(4));root.addView(heading);
         LinearLayout top=new LinearLayout(this);
         Button refresh=btn("تحديث ↻"),open=btn("فتح ملف"),order=btn("الترتيب");
         add(top,refresh);add(top,open);add(top,order);root.addView(top);
+        LinearLayout shortcuts=new LinearLayout(this);Button settings=btn("الإعدادات"), collections=btn("المكتبة"), network=btn("رابط");
+        add(shortcuts,settings);add(shortcuts,collections);add(shortcuts,network);root.addView(shortcuts);
+        settings.setOnClickListener(v->startActivity(new Intent(this,SettingsActivity.class)));
+        collections.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("المكتبة").setSingleChoiceItems(new String[]{"كل الوسائط","المفضلة","السجل"},collection,(d,n)->{collection=n;folder=null;if(n!=0)tab=ALL;d.dismiss();render();}).setNegativeButton("إلغاء",null).show());
+        network.setOnClickListener(v->openNetwork());
         LinearLayout filter=new LinearLayout(this);String[] names={"الفيديو","الموسيقى","الكل"};
-        for(int i=0;i<3;i++){final int id=i;tabs[i]=btn(names[i]);add(filter,tabs[i]);tabs[i].setOnClickListener(v->{tab=id;folder=null;render();});}root.addView(filter);
+        for(int i=0;i<3;i++){final int id=i;tabs[i]=btn(names[i]);add(filter,tabs[i]);tabs[i].setOnClickListener(v->{tab=id;folder=null;collection=0;render();});}root.addView(filter);
         search=new EditText(this);search.setSingleLine(true);search.setTextColor(INK);search.setHintTextColor(MUTED);search.setHint("بحث عن ملف أو مجلد");search.setTextSize(15);search.setPadding(dp(12),0,dp(12),0);search.setBackground(shape(PANEL));root.addView(search,new LinearLayout.LayoutParams(-1,dp(47)));
         search.addTextChangedListener(new TextWatcher(){public void beforeTextChanged(CharSequence s,int st,int c,int a){}public void onTextChanged(CharSequence s,int st,int before,int count){keyword=s.toString().trim().toLowerCase(Locale.ROOT);render();}public void afterTextChanged(Editable e){}});
         LinearLayout bar=new LinearLayout(this);bar.setGravity(Gravity.CENTER_VERTICAL);crumb=text("المجلدات",16,INK);crumb.setPadding(dp(5),0,0,0);crumb.setOnClickListener(v->{folder=null;render();});bar.addView(crumb,new LinearLayout.LayoutParams(0,dp(45),1));modeButton=btn("عرض الملفات");bar.addView(modeButton,new LinearLayout.LayoutParams(dp(120),dp(42)));root.addView(bar);
@@ -76,7 +82,7 @@ public class LibraryActivity extends Activity {
         list.setOnItemClickListener((p,v,pos,id)->{Row r=rows.get(pos);if(r.media==null){folder=r.key;search.setText("");render();list.setSelection(0);}else launch(r.media);});
         list.setOnItemLongClickListener((p,v,pos,id)->{Row r=rows.get(pos);if(r.media==null)return false;details(r.media);return true;});
         refresh.setOnClickListener(v->refresh());open.setOnClickListener(v->pick());order.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("ترتيب الملفات").setSingleChoiceItems(new String[]{"الاسم أ – ي","الأحدث أولاً","الحجم الأكبر","المدة الأطول"},sort,(d,n)->{sort=n;getPreferences(MODE_PRIVATE).edit().putInt("sort",n).apply();d.dismiss();render();}).setNegativeButton("إلغاء",null).show());
-        sort=getPreferences(MODE_PRIVATE).getInt("sort",0);render();
+        sort=getPreferences(MODE_PRIVATE).getInt("sort",0);folders=ProPrefs.flag(this,"folders",true);render();
         if(!canRead()&&!getPreferences(MODE_PRIVATE).getBoolean("asked",false))requestAccess(true);
     }
     private boolean granted(String p){return checkSelfPermission(p)==PackageManager.PERMISSION_GRANTED;}
@@ -99,7 +105,7 @@ public class LibraryActivity extends Activity {
         getPreferences(MODE_PRIVATE).edit().putBoolean("asked",true).apply();requestPermissions(perms.toArray(new String[0]),31);
     }
     @Override public void onRequestPermissionsResult(int req,String[] p,int[] results){super.onRequestPermissionsResult(req,p,results);if(req==31)refresh();}
-    @Override protected void onResume(){super.onResume();if(!observing){try{getContentResolver().registerContentObserver(MediaStore.Video.Media.EXTERNAL_CONTENT_URI,true,observer);getContentResolver().registerContentObserver(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,true,observer);observing=true;}catch(Exception e){getContentResolver().unregisterContentObserver(observer);}}refresh();}
+    @Override protected void onResume(){super.onResume();folders=ProPrefs.flag(this,"folders",true);if(!observing&&ProPrefs.flag(this,"auto_scan",true)){try{getContentResolver().registerContentObserver(MediaStore.Video.Media.EXTERNAL_CONTENT_URI,true,observer);getContentResolver().registerContentObserver(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,true,observer);observing=true;}catch(Exception e){getContentResolver().unregisterContentObserver(observer);}}refresh();}
     @Override protected void onPause(){handler.removeCallbacks(refreshTask);if(observing){getContentResolver().unregisterContentObserver(observer);observing=false;}super.onPause();}
     @Override protected void onDestroy(){dead=true;generation++;handler.removeCallbacksAndMessages(null);scanner.shutdownNow();thumbnails.shutdownNow();cache.evictAll();super.onDestroy();}
     void refresh(){
@@ -134,16 +140,16 @@ public class LibraryActivity extends Activity {
     private void render(){
         if(adapter==null)return;
         for(int i=0;i<tabs.length;i++){tabs[i].setBackground(shape(i==tab?ACCENT:PANEL));tabs[i].setTextColor(i==tab?BG:INK);}
-        ArrayList<Media> selected=new ArrayList<>();for(Media m:items){if(tab==VIDEO&&!m.video||tab==AUDIO&&m.video)continue;if(folder!=null&&!folder.equals(m.key()))continue;if(!keyword.isEmpty()&&!m.name.toLowerCase(Locale.ROOT).contains(keyword)&&!m.path.toLowerCase(Locale.ROOT).contains(keyword))continue;selected.add(m);}
-        Collections.sort(selected,comparator());rows.clear();
-        boolean group=folders&&folder==null&&keyword.isEmpty();
+        ArrayList<Media> selected=new ArrayList<>();ArrayList<String> groupUris=collection==0?null:ProPrefs.list(this,collection==1?"favorites":"history");String[] excluded=ProPrefs.get(this).getString("excluded","").toLowerCase(Locale.ROOT).split("\\r?\\n");for(Media m:items){if(groupUris!=null&&!groupUris.contains(m.uri.toString()))continue;boolean hidden=false;for(String x:excluded)if(!x.trim().isEmpty()&&m.path.toLowerCase(Locale.ROOT).contains(x.trim())){hidden=true;break;}if(hidden)continue;if(tab==VIDEO&&!m.video||tab==AUDIO&&m.video)continue;if(folder!=null&&!folder.equals(m.key()))continue;if(!keyword.isEmpty()&&!m.name.toLowerCase(Locale.ROOT).contains(keyword)&&!m.path.toLowerCase(Locale.ROOT).contains(keyword))continue;selected.add(m);}
+        if(collection==2)Collections.sort(selected,(a,b)->Integer.compare(groupUris.indexOf(a.uri.toString()),groupUris.indexOf(b.uri.toString())));else Collections.sort(selected,comparator());rows.clear();
+        boolean group=collection==0&&folders&&folder==null&&keyword.isEmpty();
         if(group){
             LinkedHashMap<String,ArrayList<Media>> map=new LinkedHashMap<>();for(Media m:selected){ArrayList<Media> bucket=map.get(m.key());if(bucket==null){bucket=new ArrayList<>();map.put(m.key(),bucket);}bucket.add(m);}
             for(Map.Entry<String,ArrayList<Media>> e:map.entrySet()){ArrayList<Media> a=e.getValue();Media m=a.get(0);rows.add(new Row(null,e.getKey(),folderName(m.path),m.path+"  •  "+a.size()+" ملف",a.size()));}
             if(sort==0)Collections.sort(rows,(a,b)->a.name.compareToIgnoreCase(b.name));
         }else for(Media m:selected)rows.add(new Row(m,m.key(),m.name,duration(m.duration)+"  •  "+size(m.size)+"  •  "+folderName(m.path),1));
         String location="المجلدات";if(folder!=null){int sep=folder.indexOf('|');location="‹ "+folderName(sep<0?folder:folder.substring(sep+1));}else if(!group)location="الملفات";
-        crumb.setText(location);modeButton.setText(folder!=null?"رجوع للمجلدات":folders?"عرض الملفات":"عرض المجلدات");
+        crumb.setText(collection==1?"المفضلة":collection==2?"السجل":location);modeButton.setText(folder!=null?"رجوع للمجلدات":folders?"عرض الملفات":"عرض المجلدات");
         summary.setText(selected.isEmpty()?"لا توجد وسائط ظاهرة • جرّب تحديث المكتبة":"الوسائط: "+selected.size()+(group?"  •  المجلدات: "+rows.size():""));
         adapter.notifyDataSetChanged();
     }
@@ -152,10 +158,12 @@ public class LibraryActivity extends Activity {
         MainActivity.setLibraryQueue(queue,m.uri);
         startActivity(new Intent(this,MainActivity.class).setAction(Intent.ACTION_VIEW).setData(m.uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION).putExtra("library",true));
     }
-    private void details(Media m){new AlertDialog.Builder(this).setTitle(m.name).setMessage("المجلد: "+m.path+"\nالنوع: "+m.mime+"\nالحجم: "+size(m.size)+"\nالمدة: "+duration(m.duration)).setPositiveButton("تشغيل",(d,w)->launch(m)).setNeutralButton("مشاركة",(d,w)->{Intent i=new Intent(Intent.ACTION_SEND).setType(m.mime==null?(m.video?"video/*":"audio/*"):m.mime).putExtra(Intent.EXTRA_STREAM,m.uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);i.setClipData(ClipData.newRawUri(m.name,m.uri));startActivity(Intent.createChooser(i,"مشاركة"));}).setNegativeButton("إغلاق",null).show();}
+    private void details(Media m){new AlertDialog.Builder(this).setTitle(m.name).setItems(new String[]{"تشغيل",ProPrefs.favorite(this,m.uri)?"إزالة من المفضلة":"إضافة إلى المفضلة","التفاصيل والمشاركة"},(d,w)->{if(w==0)launch(m);else if(w==1){ProPrefs.toggle(this,m.uri);render();}else mediaDetails(m);}).setNegativeButton("إلغاء",null).show();}
+    private void mediaDetails(Media m){new AlertDialog.Builder(this).setTitle(m.name).setMessage("المجلد: "+m.path+"\nالنوع: "+m.mime+"\nالحجم: "+size(m.size)+"\nالمدة: "+duration(m.duration)).setPositiveButton("تشغيل",(d,w)->launch(m)).setNeutralButton("مشاركة",(d,w)->{Intent i=new Intent(Intent.ACTION_SEND).setType(m.mime==null?(m.video?"video/*":"audio/*"):m.mime).putExtra(Intent.EXTRA_STREAM,m.uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);i.setClipData(ClipData.newRawUri(m.name,m.uri));startActivity(Intent.createChooser(i,"مشاركة"));}).setNegativeButton("إغلاق",null).show();}
+    private void openNetwork(){EditText e=new EditText(this);e.setSingleLine(true);e.setHint("https://…");e.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_VARIATION_URI);new AlertDialog.Builder(this).setTitle("فتح رابط وسائط").setMessage("استخدم رابطًا مباشرًا موثوقًا (HTTPS أو RTSP).").setView(e).setPositiveButton("تشغيل",(d,w)->{Uri u=Uri.parse(e.getText().toString().trim());String s=u.getScheme();if(u.getHost()==null||!("https".equalsIgnoreCase(s)||"rtsp".equalsIgnoreCase(s)||("http".equalsIgnoreCase(s)&&ProPrefs.flag(this,"http",false)))){Toast.makeText(this,"الرابط غير صالح أو HTTP غير مسموح",Toast.LENGTH_LONG).show();return;}startActivity(new Intent(this,MainActivity.class).setAction(Intent.ACTION_VIEW).setData(u).putExtra("network",true));}).setNegativeButton("إلغاء",null).show();}
     private void pick(){Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT).setType("*/*").addCategory(Intent.CATEGORY_OPENABLE).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);try{startActivityForResult(i,22);}catch(Exception e){Toast.makeText(this,"لا يوجد مدير ملفات",Toast.LENGTH_SHORT).show();}}
     @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);if(request!=22||result!=RESULT_OK||data==null||data.getData()==null)return;Uri u=data.getData();try{getContentResolver().takePersistableUriPermission(u,data.getFlags()&Intent.FLAG_GRANT_READ_URI_PERMISSION);}catch(Exception ignored){}MainActivity.setLibraryQueue(new ArrayList<>(),u);startActivity(new Intent(this,MainActivity.class).setAction(Intent.ACTION_VIEW).setData(u).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION));}
-    @Override public void onBackPressed(){if(folder!=null){folder=null;render();}else if(!keyword.isEmpty())search.setText("");else super.onBackPressed();}
+    @Override public void onBackPressed(){if(folder!=null){folder=null;render();}else if(!keyword.isEmpty())search.setText("");else if(collection!=0){collection=0;render();}else super.onBackPressed();}
     int mediaCountForTest(){return items.size();}
     boolean hasMediaForTest(String n){for(Media m:items)if(m.name.equals(n))return true;return false;}
     boolean hasFolderForTest(String n){for(Row r:rows)if(r.media==null&&r.name.equals(n))return true;return false;}
@@ -174,8 +182,8 @@ public class LibraryActivity extends Activity {
                 TextView name=text("",15,INK);name.setMaxLines(2);name.setEllipsize(android.text.TextUtils.TruncateAt.END);labels.addView(name);TextView detail=text("",12,MUTED);detail.setMaxLines(2);labels.addView(detail);
                 h=new Holder();h.icon=icon;h.image=image;h.name=name;h.detail=detail;layout.setTag(h);convert=layout;
             }else h=(Holder)convert.getTag();
-            h.name.setText(r.name);h.detail.setText(r.detail);h.image.setImageDrawable(null);h.image.setVisibility(View.GONE);h.icon.setVisibility(View.VISIBLE);h.icon.setText(r.media==null?"▰":r.media.video?"▶":"♪");h.image.setTag(null);
-            if(r.media!=null&&r.media.video&&Build.VERSION.SDK_INT>=29){Uri u=r.media.uri;String k=u.toString()+":"+r.media.date;h.image.setTag(k);Bitmap hit=cache.get(k);if(hit!=null){h.image.setImageBitmap(hit);h.image.setVisibility(View.VISIBLE);h.icon.setVisibility(View.GONE);}else if(!dead){final Holder holder=h;try{thumbnails.execute(()->{if(dead)return;try{Bitmap bitmap=getContentResolver().loadThumbnail(u,new Size(160,100),null);if(bitmap==null||dead)return;cache.put(k,bitmap);runOnUiThread(()->{if(!dead&&k.equals(holder.image.getTag())){holder.image.setImageBitmap(bitmap);holder.image.setVisibility(View.VISIBLE);holder.icon.setVisibility(View.GONE);}});}catch(Exception ignored){}});}catch(RejectedExecutionException ignored){}}}
+            h.name.setText(r.media!=null&&ProPrefs.favorite(LibraryActivity.this,r.media.uri)?"♥ "+r.name:r.name);h.detail.setText(r.detail);h.image.setImageDrawable(null);h.image.setVisibility(View.GONE);h.icon.setVisibility(View.VISIBLE);h.icon.setText(r.media==null?"▰":r.media.video?"▶":"♪");h.image.setTag(null);
+            if(ProPrefs.flag(LibraryActivity.this,"thumbnails",true)&&r.media!=null&&r.media.video&&Build.VERSION.SDK_INT>=29){Uri u=r.media.uri;String k=u.toString()+":"+r.media.date;h.image.setTag(k);Bitmap hit=cache.get(k);if(hit!=null){h.image.setImageBitmap(hit);h.image.setVisibility(View.VISIBLE);h.icon.setVisibility(View.GONE);}else if(!dead){final Holder holder=h;try{thumbnails.execute(()->{if(dead)return;try{Bitmap bitmap=getContentResolver().loadThumbnail(u,new Size(160,100),null);if(bitmap==null||dead)return;cache.put(k,bitmap);runOnUiThread(()->{if(!dead&&k.equals(holder.image.getTag())){holder.image.setImageBitmap(bitmap);holder.image.setVisibility(View.VISIBLE);holder.icon.setVisibility(View.GONE);}});}catch(Exception ignored){}});}catch(RejectedExecutionException ignored){}}}
             return convert;
         }
     }

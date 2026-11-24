@@ -1,0 +1,39 @@
+package com.xplayer.lite;
+import android.app.*;
+import android.content.*;
+import android.graphics.Color;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
+import android.os.Bundle;
+import android.view.*;
+import android.widget.*;
+public class SettingsActivity extends Activity {
+ private static final int BG=0xff121923,PANEL=0xff202d3b,INK=0xfff5f7fa,MUTED=0xffa5b5c7,ACCENT=0xff44e7b2;
+ private LinearLayout body,root;
+ private int page=-1;
+ private final String[] names={"عام","المكتبة والمجلدات","مشغل الفيديو","الصوت","الترجمة","الشبكة","الخصوصية","حول التطبيق"};
+ private final String[] descriptions={"التشغيل، اللغة والمظهر الحالي","الفحص والصور المصغرة والعرض","الإيماءات، سرعة التشغيل والاستكمال","معادل الصوت والتحكم أثناء التشغيل","حجم الخط واللون والخلفية","تشغيل روابط الوسائط","السجل والمجلدات المستبعدة","الإصدار ومعلومات المحرك"};
+ private int dp(int n){return Math.round(n*getResources().getDisplayMetrics().density);}
+ private TextView txt(String s,int size,int color){TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(color);return t;}
+ private void line(){View v=new View(this);v.setBackgroundColor(0xff293746);body.addView(v,new LinearLayout.LayoutParams(-1,dp(1)));}
+ private void row(String title,String desc,Runnable action){LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setPadding(dp(15),dp(14),dp(15),dp(14));TextView t=txt(title+"   ›",17,INK);box.addView(t);if(!desc.isEmpty()){TextView d=txt(desc,13,MUTED);d.setPadding(0,dp(4),0,0);box.addView(d);}if(action!=null){box.setClickable(true);box.setOnClickListener(v->action.run());android.util.TypedValue val=new android.util.TypedValue();getTheme().resolveAttribute(android.R.attr.selectableItemBackground,val,true);box.setBackgroundResource(val.resourceId);}body.addView(box);line();}
+ private void toggle(String title,String desc,String k,boolean def){LinearLayout row=new LinearLayout(this);row.setPadding(dp(15),dp(12),dp(15),dp(12));row.setGravity(Gravity.CENTER_VERTICAL);LinearLayout labels=new LinearLayout(this);labels.setOrientation(LinearLayout.VERTICAL);labels.addView(txt(title,17,INK));labels.addView(txt(desc,13,MUTED));row.addView(labels,new LinearLayout.LayoutParams(0,-2,1));Switch sw=new Switch(this);sw.setChecked(ProPrefs.flag(this,k,def));sw.setOnCheckedChangeListener((b,v)->ProPrefs.get(this).edit().putBoolean(k,v).apply());row.addView(sw);body.addView(row);line();}
+ private void choose(String title,String k,String[] opts,int def){int selected=Math.max(0,Math.min(opts.length-1,ProPrefs.number(this,k,def)));row(title,opts[selected],()->new AlertDialog.Builder(this).setTitle(title).setSingleChoiceItems(opts,selected,(d,w)->{ProPrefs.get(this).edit().putInt(k,w).apply();d.dismiss();show(page);}).setNegativeButton("إلغاء",null).show());}
+ @Override public void onCreate(Bundle b){super.onCreate(b);getWindow().setStatusBarColor(BG);getWindow().setNavigationBarColor(BG);show(b==null?-1:b.getInt("page",-1));}
+ void show(int p){page=p;root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(BG);LinearLayout top=new LinearLayout(this);top.setGravity(Gravity.CENTER_VERTICAL);top.setPadding(dp(8),dp(8),dp(8),dp(8));Button back=new Button(this);back.setText("‹");back.setTextSize(24);back.setContentDescription("رجوع");back.setOnClickListener(v->onBackPressed());top.addView(back,new LinearLayout.LayoutParams(dp(52),dp(48)));TextView h=txt(p<0?"الإعدادات":names[p],23,ACCENT);h.setTypeface(null,Typeface.BOLD);h.setPadding(dp(12),0,0,0);top.addView(h,new LinearLayout.LayoutParams(0,-2,1));root.addView(top);ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);scroll.addView(body);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));setContentView(root);
+ if(p<0){for(int i=0;i<names.length;i++){final int n=i;row(names[i],descriptions[i],()->show(n));}return;}
+ switch(p){
+ case 0:toggle("التشغيل التلقائي","بدء التشغيل عند اختيار ملف", "autoplay",true);choose("سرعة التشغيل الافتراضية","speed",ProPrefs.speeds,3);row("المظهر","الوضع الداكن الحالي",null);break;
+ case 1:toggle("الفحص التلقائي","تحديث المكتبة أثناء ظهورها","auto_scan",true);toggle("الصور المصغرة","إظهار معاينة الفيديو في قائمة الملفات","thumbnails",true);toggle("عرض المجلدات","بدلاً من عرض كل الملفات","folders",true);row("استبعاد مجلدات","أسماء أو أجزاء من مسارات المجلدات (كل سطر على حدة)",()->editExcluded());break;
+ case 2:toggle("استكمال المشاهدة","تذكر آخر موضع لكل ملف","resume",true);toggle("التشغيل المتتابع","تشغيل الملف التالي من القائمة","auto_next",true);toggle("الإيماءات","سحب الصوت والإضاءة والتقديم في ملء الشاشة","gestures",true);toggle("النقر المزدوج","تقديم أو تأخير في ملء الشاشة","double_tap",true);choose("مدة القفز","seek",new String[]{"5 ثوانٍ","10 ثوانٍ","15 ثانية","30 ثانية"},1);choose("نسبة العرض","resize",new String[]{"ملاءمة","تكبير لملء الشاشة","تمديد"},0);toggle("إبقاء الشاشة مضاءة","أثناء تشغيل الفيديو","keep_screen",true);break;
+ case 3:row("معادل الصوت","متاح من قائمة ⋮ داخل المشغل حسب دعم الجهاز",null);toggle("إيقاف عند فصل السماعات","تجنب خروج الصوت من مكبر الهاتف","noisy",true);break;
+ case 4:choose("حجم الترجمة","subtitle_size",new String[]{"صغير","متوسط","كبير","كبير جدًا"},1);choose("لون الترجمة","subtitle_color",new String[]{"أبيض","أصفر","سماوي"},0);toggle("خلفية سوداء","تحسين وضوح الترجمة","subtitle_bg",true);break;
+ case 5:row("فتح رابط","HTTP/HTTPS وHLS وDASH وRTSP من الشاشة الرئيسية",null);toggle("السماح بروابط HTTP غير المشفرة","يُنصح باستخدام HTTPS. هذا الإعداد لا يغير حماية التطبيقات الأخرى.","http",false);break;
+ case 6:toggle("سجل المشاهدة","حفظ الوسائط التي فتحتها محليًا","history_enabled",true);row("مسح سجل المشاهدة","حذف السجل من التطبيق دون حذف أي وسائط",()->new AlertDialog.Builder(this).setMessage("مسح سجل المشاهدة؟").setPositiveButton("مسح",(d,w)->ProPrefs.get(this).edit().remove("history").apply()).setNegativeButton("إلغاء",null).show());break;
+ case 7:row("X Player Pro","3.0 Preview 1 • Media3 / ExoPlayer",null);row("التوافق","Android 6+؛ يعتمد فك الترميز على الجهاز. هذه النسخة لا تتضمن LibVLC.",null);break;
+ }
+ }
+ private void editExcluded(){EditText e=new EditText(this);e.setSingleLine(false);e.setMinLines(3);e.setText(ProPrefs.get(this).getString("excluded",""));new AlertDialog.Builder(this).setTitle("المجلدات المستبعدة").setView(e).setPositiveButton("حفظ",(d,w)->ProPrefs.get(this).edit().putString("excluded",e.getText().toString()).apply()).setNegativeButton("إلغاء",null).show();}
+ @Override public void onBackPressed(){if(page>=0)show(-1);else super.onBackPressed();}
+ @Override protected void onSaveInstanceState(Bundle b){super.onSaveInstanceState(b);b.putInt("page",page);}
+}

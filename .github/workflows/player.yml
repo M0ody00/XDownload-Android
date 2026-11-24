@@ -1,7 +1,7 @@
-name: Build and test X Player Lite 2.0 library
+name: Build and test X Player Pro preview 1
 on:
   push:
-    branches: [x-player-lite]
+    branches: [x-player-pro]
   workflow_dispatch:
 permissions:
   contents: read
@@ -44,10 +44,10 @@ jobs:
           unzip -tq "$APK"
           "$BT/apksigner" verify --verbose "$APK"
           "$BT/aapt" dump badging "$APK" | tee apk-info.txt
-          grep -F "package: name='com.xplayer.lite.library'" apk-info.txt
+          grep -F "package: name='com.xplayer.pro'" apk-info.txt
           grep -F "sdkVersion:'23'" apk-info.txt
           mkdir -p candidate
-          cp "$APK" candidate/XPlayer-Lite.apk
+          cp "$APK" candidate/XPlayer-Pro.apk
           cp app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk candidate/test.apk
           sha256sum candidate/*.apk
           ls -lh candidate/*.apk
@@ -80,12 +80,12 @@ jobs:
           #!/bin/bash
           set -euo pipefail
           mkdir -p evidence
-          adb install -g candidate/XPlayer-Lite.apk
+          adb install -g candidate/XPlayer-Pro.apk
           adb install -t candidate/test.apk
-          adb shell am instrument -w -r com.xplayer.lite.library.test/androidx.test.runner.AndroidJUnitRunner | tee evidence/instrumentation.txt
+          adb shell am instrument -w -r com.xplayer.pro.test/androidx.test.runner.AndroidJUnitRunner | tee evidence/instrumentation.txt
           adb logcat -d -s XPlayerTest:I AndroidRuntime:E > evidence/playback-log.txt
           cat evidence/playback-log.txt
-          grep -E 'OK \(7 tests\)' evidence/instrumentation.txt
+          grep -E 'OK \(9 tests\)' evidence/instrumentation.txt
           if grep -E 'FAILURES!!!|INSTRUMENTATION_FAILED|Process crashed' evidence/instrumentation.txt; then exit 1; fi
           EOF
       - uses: reactivecircus/android-emulator-runner@v2
@@ -113,6 +113,6 @@ jobs:
           path: candidate
       - uses: actions/upload-artifact@v4
         with:
-          name: XPlayer-Lite-v2-TESTED
-          path: candidate/XPlayer-Lite.apk
+          name: XPlayer-Pro-preview1-TESTED
+          path: candidate/XPlayer-Pro.apk
           if-no-files-found: error
