@@ -75,7 +75,7 @@ public class MainActivity extends Activity {
     private int dp(int n){return Math.round(n*getResources().getDisplayMetrics().density);}
     private GradientDrawable bg(int color){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(12));return d;}
     private TextView label(String s,int size,int color){TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(color);t.setPadding(dp(12),dp(8),dp(12),dp(8));return t;}
-    private Button button(String s,boolean primary){Button b=new Button(this);b.setText(s);b.setTextSize(13);b.setAllCaps(false);b.setTextColor(primary?BG:INK);b.setBackground(bg(primary?ACCENT:PANEL));b.setMinHeight(dp(44));return b;}
+    private Button button(String s,boolean primary){Button b=new Button(this);b.setText(s);b.setTextSize(13);b.setAllCaps(false);b.setTextColor(primary?BG:INK);b.setBackground(bg(primary?ProPrefs.accent(this):PANEL));b.setMinHeight(dp(44));return b;}
     private void addButton(LinearLayout row,Button b){LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(46),1);p.setMargins(dp(3),dp(4),dp(3),dp(4));row.addView(b,p);}
     @Override public void onCreate(Bundle state){
         super.onCreate(state);
@@ -84,7 +84,7 @@ public class MainActivity extends Activity {
         setVolumeControlStream(AudioManager.STREAM_MUSIC);
         LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(BG);
         header=new LinearLayout(this);header.setOrientation(LinearLayout.VERTICAL);
-        TextView logo=label("X PLAYER PRO",24,ACCENT);logo.setTypeface(null,Typeface.BOLD);header.addView(logo);
+        TextView logo=label("X PLAYER PRO",24,ProPrefs.accent(this));logo.setTypeface(null,Typeface.BOLD);header.addView(logo);
         title=label("اختر فيديو أو ملف صوتي",15,INK);title.setMaxLines(2);header.addView(title);
         root.addView(header);
         screen=new PlayerView(this);screen.setBackgroundColor(Color.BLACK);screen.setUseController(true);screen.setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING);
@@ -93,17 +93,17 @@ public class MainActivity extends Activity {
         tools=new LinearLayout(this);tools.setOrientation(LinearLayout.VERTICAL);tools.setPadding(dp(6),dp(3),dp(6),dp(4));
         status=label("جاهز • يعمل دون إنترنت",13,INK);tools.addView(status);
         LinearLayout first=new LinearLayout(this);
-        Button open=button("فتح ملف",true), speed=button("السرعة",false), subs=button("الترجمة",false);
+        Button open=button(ProPrefs.label(this,"فتح ملف","Open file"),true), speed=button(ProPrefs.label(this,"السرعة","Speed"),false), subs=button(ProPrefs.label(this,"الترجمة","Subtitles"),false);
         addButton(first,open);addButton(first,speed);addButton(first,subs);tools.addView(first);
         LinearLayout second=new LinearLayout(this);
         Button back=button("−10 ثوانٍ",false), next=button("+10 ثوانٍ",false), fullscreen=button("ملء الشاشة",false), pip=button("عائم",false);
         addButton(second,back);addButton(second,next);addButton(second,fullscreen);addButton(second,pip);tools.addView(second);
         LinearLayout tracks=new LinearLayout(this);
-        Button previousFile=button("السابق",false),nextFile=button("التالي",false),trackSettings=button("مسارات الصوت",false);
+        Button previousFile=button(ProPrefs.label(this,"السابق","Previous"),false),nextFile=button(ProPrefs.label(this,"التالي","Next"),false),trackSettings=button(ProPrefs.label(this,"مسارات الصوت","Audio tracks"),false);
         addButton(tracks,previousFile);addButton(tracks,nextFile);addButton(tracks,trackSettings);tools.addView(tracks);
         previousFile.setOnClickListener(v->moveTrack(-1));nextFile.setOnClickListener(v->moveTrack(1));
         trackSettings.setOnClickListener(v->new androidx.media3.ui.TrackSelectionDialogBuilder(this,"مسارات الصوت",player,C.TRACK_TYPE_AUDIO).build().show());
-        LinearLayout moreRow=new LinearLayout(this);Button more=button("⋮ أدوات المشغل",true),settings=button("الإعدادات",false);addButton(moreRow,more);addButton(moreRow,settings);tools.addView(moreRow);
+        LinearLayout moreRow=new LinearLayout(this);Button more=button(ProPrefs.label(this,"⋮ أدوات المشغل","⋮ Player tools"),true),settings=button(ProPrefs.label(this,"الإعدادات","Settings"),false);addButton(moreRow,more);addButton(moreRow,settings);tools.addView(moreRow);
         more.setOnClickListener(v->showMore());settings.setOnClickListener(v->startActivity(new Intent(this,SettingsActivity.class)));
         root.addView(tools);setContentView(root);
         DefaultRenderersFactory renderers=new DefaultRenderersFactory(this).setEnableDecoderFallback(true);

@@ -31,6 +31,7 @@ public class LibraryActivity extends Activity {
     private final ArrayList<Media> items=new ArrayList<>();
     private final ArrayList<Row> rows=new ArrayList<>();
     private ListView list;
+    private int appliedLanguage=-1,appliedAccent=-1;
     private TextView summary,crumb;
     private Button permission,modeButton;
     private final Button[] tabs=new Button[3];
@@ -63,6 +64,7 @@ public class LibraryActivity extends Activity {
     private void add(LinearLayout r,Button b){LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(44),1);p.setMargins(dp(3),dp(3),dp(3),dp(3));r.addView(b,p);}
     @Override public void onCreate(Bundle b){
         super.onCreate(b);
+        appliedLanguage=ProPrefs.number(this,"language",0);appliedAccent=ProPrefs.number(this,"accent",0);
         getWindow().setStatusBarColor(BG);getWindow().setNavigationBarColor(BG);
         LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(BG);root.setPadding(dp(10),dp(8),dp(10),dp(6));setContentView(root);
         TextView heading=text("X PLAYER PRO",25,ProPrefs.accent(this));heading.setTypeface(null,Typeface.BOLD);heading.setPadding(dp(6),dp(6),0,dp(4));root.addView(heading);
@@ -109,7 +111,7 @@ public class LibraryActivity extends Activity {
         getPreferences(MODE_PRIVATE).edit().putBoolean("asked",true).apply();requestPermissions(perms.toArray(new String[0]),31);
     }
     @Override public void onRequestPermissionsResult(int req,String[] p,int[] results){super.onRequestPermissionsResult(req,p,results);if(req==31)refresh();}
-    @Override protected void onResume(){super.onResume();folders=ProPrefs.flag(this,"folders",true);if(!observing&&ProPrefs.flag(this,"auto_scan",true)){try{getContentResolver().registerContentObserver(MediaStore.Video.Media.EXTERNAL_CONTENT_URI,true,observer);getContentResolver().registerContentObserver(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,true,observer);observing=true;}catch(Exception e){getContentResolver().unregisterContentObserver(observer);}}refresh();}
+    @Override protected void onResume(){super.onResume();if(appliedLanguage!=ProPrefs.number(this,"language",0)||appliedAccent!=ProPrefs.number(this,"accent",0)){recreate();return;}folders=ProPrefs.flag(this,"folders",true);if(!observing&&ProPrefs.flag(this,"auto_scan",true)){try{getContentResolver().registerContentObserver(MediaStore.Video.Media.EXTERNAL_CONTENT_URI,true,observer);getContentResolver().registerContentObserver(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,true,observer);observing=true;}catch(Exception e){getContentResolver().unregisterContentObserver(observer);}}refresh();}
     @Override protected void onStop(){if(privateUnlocked){privateUnlocked=false;folder=null;render();}super.onStop();}
     @Override protected void onPause(){handler.removeCallbacks(refreshTask);if(observing){getContentResolver().unregisterContentObserver(observer);observing=false;}super.onPause();}
     @Override protected void onDestroy(){dead=true;generation++;handler.removeCallbacksAndMessages(null);scanner.shutdownNow();thumbnails.shutdownNow();cache.evictAll();super.onDestroy();}

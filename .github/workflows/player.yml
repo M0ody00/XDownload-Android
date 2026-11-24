@@ -59,7 +59,7 @@ jobs:
   test:
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
@@ -85,7 +85,7 @@ jobs:
           adb shell am instrument -w -r com.xplayer.pro.test/androidx.test.runner.AndroidJUnitRunner | tee evidence/instrumentation.txt
           adb logcat -d -s XPlayerTest:I AndroidRuntime:E > evidence/playback-log.txt
           cat evidence/playback-log.txt
-          grep -E 'OK \(12 tests\)' evidence/instrumentation.txt
+          grep -E 'OK \(14 tests\)' evidence/instrumentation.txt
           if grep -E 'FAILURES!!!|INSTRUMENTATION_FAILED|Process crashed' evidence/instrumentation.txt; then exit 1; fi
           EOF
       - uses: reactivecircus/android-emulator-runner@v2
