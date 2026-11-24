@@ -107,7 +107,7 @@ jobs:
           adb logcat -d -s XPlayerTest:I AndroidRuntime:E > evidence/playback-log.txt
           cat evidence/playback-log.txt
           for image in library view-sort settings about player player-tools player-landscape media-notification; do adb exec-out run-as com.xplayer.pro cat files/ui-evidence/$image.png > evidence/$image.png; done
-          grep -E 'OK \(25 tests\)' evidence/instrumentation.txt
+          grep -E 'OK \(26 tests\)' evidence/instrumentation.txt
           if grep -E 'FAILURES!!!|INSTRUMENTATION_FAILED|Process crashed' evidence/instrumentation.txt; then exit 1; fi
           EOF
       - uses: reactivecircus/android-emulator-runner@v2

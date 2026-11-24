@@ -34,6 +34,7 @@ import java.util.concurrent.*;
  private long duration=-1;
  private boolean playing,canPrev,canNext,published=false;
  private Bitmap artwork,placeholder;
+ private Future<?> artworkTask;
  NowPlaying(Activity activity, Controls controls){
   if(owner!=null)owner.release();
   this.activity=activity;this.controls=controls;manager=(NotificationManager)activity.getSystemService(Context.NOTIFICATION_SERVICE);
@@ -51,7 +52,7 @@ import java.util.concurrent.*;
   },handler);
   receiver=new BroadcastReceiver(){@Override public void onReceive(Context c,Intent i){if(released||i.getAction()==null||!i.getAction().startsWith(prefix))return;switch(i.getAction().substring(prefix.length())){case "play":controls.play();break;case "pause":controls.pause();break;case "previous":if(canPrev)controls.previous();break;case "next":if(canNext)controls.next();break;case "close":controls.close();break;}}};
   IntentFilter filter=new IntentFilter();for(String action:new String[]{"play","pause","previous","next","close"})filter.addAction(prefix+action);
-  if(Build.VERSION.SDK_INT>=33)activity.registerReceiver(receiver,filter,Context.RECEIVER_NOT_EXPORTED);else activity.registerReceiver(receiver,filter);registered=true;owner=this;
+  String permission=activity.getPackageName()+".MEDIA_CONTROL";if(Build.VERSION.SDK_INT>=33)activity.registerReceiver(receiver,filter,permission,handler,Context.RECEIVER_NOT_EXPORTED);else activity.registerReceiver(receiver,filter,permission,handler);registered=true;owner=this;
   placeholder=Bitmap.createBitmap(128,128,Bitmap.Config.ARGB_8888);Canvas canvas=new Canvas(placeholder);canvas.drawColor(0xff203c58);Ui.Glyph glyph=new Ui.Glyph("play",0xffdcecff);glyph.setBounds(38,34,90,94);glyph.draw(canvas);artwork=placeholder;
  }
  private PendingIntent action(String name,int code){Intent i=new Intent(prefix+name).setPackage(activity.getPackageName());return PendingIntent.getBroadcast(activity,code,i,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);}
@@ -60,7 +61,7 @@ import java.util.concurrent.*;
   boolean trackChanged=!source.equals(uri),metadataChanged=trackChanged||!name.equals(title)||length!=duration;
   boolean changed=!published||metadataChanged||playing!=isPlaying||canPrev!=previous||canNext!=next;
   uri=source;title=name;duration=length;playing=isPlaying;canPrev=previous;canNext=next;
-  if(trackChanged){artwork=placeholder;loadArt(source);}
+  if(trackChanged){if(artworkTask!=null)artworkTask.cancel(true);artwork=placeholder;loadArt(source);}
   if(metadataChanged)metadata();
   long actions=PlaybackState.ACTION_PLAY|PlaybackState.ACTION_PAUSE|PlaybackState.ACTION_PLAY_PAUSE|PlaybackState.ACTION_STOP;
   if(length>0)actions|=PlaybackState.ACTION_SEEK_TO;if(previous)actions|=PlaybackState.ACTION_SKIP_TO_PREVIOUS;if(next)actions|=PlaybackState.ACTION_SKIP_TO_NEXT;
@@ -69,7 +70,7 @@ import java.util.concurrent.*;
   if(changed)publish();
  }
  private void metadata(){MediaMetadata.Builder m=new MediaMetadata.Builder().putString(MediaMetadata.METADATA_KEY_TITLE,title).putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE,title).putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART,artwork).putBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON,artwork);if(duration>0)m.putLong(MediaMetadata.METADATA_KEY_DURATION,duration);session.setMetadata(m.build());}
- private void loadArt(Uri source){if(!"content".equals(source.getScheme())&&!"file".equals(source.getScheme()))return;try{io.execute(()->{Bitmap b=null;try{if(Build.VERSION.SDK_INT>=29)b=activity.getContentResolver().loadThumbnail(source,new android.util.Size(128,128),null);}catch(Exception ignored){}if(b==null){android.media.MediaMetadataRetriever r=new android.media.MediaMetadataRetriever();try{r.setDataSource(activity,source);byte[] art=r.getEmbeddedPicture();if(art!=null&&art.length<=4*1024*1024){BitmapFactory.Options o=new BitmapFactory.Options();o.inJustDecodeBounds=true;BitmapFactory.decodeByteArray(art,0,art.length,o);o.inSampleSize=1;while(Math.max(o.outWidth,o.outHeight)/o.inSampleSize>256)o.inSampleSize*=2;o.inJustDecodeBounds=false;b=BitmapFactory.decodeByteArray(art,0,art.length,o);}}catch(Exception ignored){}finally{try{r.release();}catch(Exception ignored){}}}final Bitmap result=b;if(result!=null)handler.post(()->{if(!released&&source.equals(uri)){artwork=result;metadata();publish();}});});}catch(RejectedExecutionException ignored){}}
+ private void loadArt(Uri source){if(!"content".equals(source.getScheme())&&!"file".equals(source.getScheme()))return;try{artworkTask=io.submit(()->{if(Thread.currentThread().isInterrupted())return;Bitmap b=null;try{if(Build.VERSION.SDK_INT>=29)b=activity.getContentResolver().loadThumbnail(source,new android.util.Size(128,128),null);}catch(Exception ignored){}if(b==null&&!Thread.currentThread().isInterrupted()){android.media.MediaMetadataRetriever r=new android.media.MediaMetadataRetriever();try{r.setDataSource(activity,source);byte[] art=r.getEmbeddedPicture();if(art!=null&&art.length<=4*1024*1024){BitmapFactory.Options o=new BitmapFactory.Options();o.inJustDecodeBounds=true;BitmapFactory.decodeByteArray(art,0,art.length,o);o.inSampleSize=1;while(Math.max(o.outWidth,o.outHeight)/o.inSampleSize>256)o.inSampleSize*=2;o.inJustDecodeBounds=false;b=BitmapFactory.decodeByteArray(art,0,art.length,o);}}catch(Exception ignored){}finally{try{r.release();}catch(Exception ignored){}}}final Bitmap result=b;if(result!=null&&!Thread.currentThread().isInterrupted())handler.post(()->{if(!released&&source.equals(uri)){artwork=result;metadata();publish();}});});}catch(RejectedExecutionException ignored){}}
  private void publish(){if(released)return;Notification.Builder b=Build.VERSION.SDK_INT>=26?new Notification.Builder(activity,CHANNEL):new Notification.Builder(activity);
  b.setSmallIcon(android.R.drawable.ic_media_play).setLargeIcon(artwork).setContentTitle(title).setContentIntent(open).setCategory(Notification.CATEGORY_TRANSPORT).setVisibility(Notification.VISIBILITY_PUBLIC).setColor(0xff244b70).setOnlyAlertOnce(true).setShowWhen(false).setOngoing(playing).setDeleteIntent(action("close",7415));
  java.util.ArrayList<Integer> compact=new java.util.ArrayList<>();int index=0;
@@ -81,5 +82,5 @@ import java.util.concurrent.*;
  }
  boolean isPublished(){return published&&!released&&session.isActive();}
  MediaSession.Token token(){return session.getSessionToken();}
- void release(){if(released)return;released=true;handler.removeCallbacksAndMessages(null);io.shutdownNow();if(registered){try{activity.unregisterReceiver(receiver);}catch(Exception ignored){}registered=false;}session.setActive(false);session.release();if(owner==this){manager.cancel(ID);owner=null;}}
+ void release(){if(released)return;released=true;handler.removeCallbacksAndMessages(null);if(artworkTask!=null)artworkTask.cancel(true);io.shutdownNow();if(registered){try{activity.unregisterReceiver(receiver);}catch(Exception ignored){}registered=false;}session.setActive(false);session.release();if(owner==this){manager.cancel(ID);owner=null;}}
 }
