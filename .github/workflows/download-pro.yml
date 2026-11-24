@@ -43,6 +43,19 @@ jobs:
           cp app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk candidate/test.apk
           unzip -tq candidate/XDownload-Pro.apk
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs candidate/XDownload-Pro.apk
+      - name: Build ARM64 phone candidate
+        run: |
+          gradle --no-daemon :app:assembleDebug -PphoneAbi=arm64-v8a
+          mkdir -p phone
+          cp app/build/outputs/apk/debug/app-debug.apk phone/XDownload-Pro-ARM64.apk
+          BT="$ANDROID_HOME/build-tools/35.0.0"
+          "$BT/apksigner" verify --verbose --print-certs phone/XDownload-Pro-ARM64.apk
+          "$BT/aapt" dump badging phone/XDownload-Pro-ARM64.apk | grep "native-code: 'arm64-v8a'"
+          unzip -tq phone/XDownload-Pro-ARM64.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: phone-candidate
+          path: phone/
       - uses: actions/upload-artifact@v4
         with:
           name: candidate
@@ -73,7 +86,7 @@ jobs:
           script: |
             adb install -g candidate/XDownload-Pro.apk
             adb install -g candidate/test.apk
-            adb shell am instrument -w com.xdownload.pro.test/androidx.test.runner.AndroidJUnitRunner | tee result.txt
+            adb shell am instrument -w com.xdownload.pro.media.test/androidx.test.runner.AndroidJUnitRunner | tee result.txt
             grep -F 'OK (3 tests)' result.txt
   verified:
     needs: [build, emulator]
@@ -85,5 +98,13 @@ jobs:
           path: candidate
       - uses: actions/upload-artifact@v4
         with:
-          name: XDownload-Pro-RC2-TESTED
+          name: XDownload-Pro-RC3-TESTED
           path: candidate/XDownload-Pro.apk
+      - uses: actions/download-artifact@v4
+        with:
+          name: phone-candidate
+          path: phone
+      - uses: actions/upload-artifact@v4
+        with:
+          name: XDownload-Pro-RC3-ARM64-DEVICE-TEST-REQUIRED
+          path: phone/XDownload-Pro-ARM64.apk
