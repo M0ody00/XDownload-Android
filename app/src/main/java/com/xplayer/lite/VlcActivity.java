@@ -30,7 +30,7 @@ public class VlcActivity extends Activity {
  private Button button(String title,Runnable r){Button b=new Button(this);b.setText(title);b.setAllCaps(false);b.setTextColor(Ui.WHITE);b.setTextSize(12);b.setBackgroundColor(Ui.PANEL);b.setOnClickListener(v->r.run());return b;}
  private void row(LinearLayout root,Button... buttons){LinearLayout r=new LinearLayout(this);for(Button b:buttons)r.addView(b,new LinearLayout.LayoutParams(0,-2,1));root.addView(r);}
  @Override public void onCreate(Bundle b){
-   super.onCreate(b);source=getIntent().getData();startAt=getIntent().getLongExtra("position",0);software=getIntent().getBooleanExtra("software",true);
+   super.onCreate(b);audioOffset=ProPrefs.number(this,"audio_delay",0)*1000L;subtitleOffset=ProPrefs.number(this,"subtitle_delay",0)*1000L;source=getIntent().getData();startAt=getIntent().getLongExtra("position",0);software=getIntent().getBooleanExtra("software",true);
    LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(Ui.BLACK);
    info=new TextView(this);info.setTextColor(Color.WHITE);info.setTextSize(15);info.setPadding(12,12,12,12);info.setText("LibVLC • Software");root.addView(info);
    video=new VLCVideoLayout(this);root.addView(video,new LinearLayout.LayoutParams(-1,0,1));seek=new SeekBar(this);seek.setMax(1000);root.addView(seek);
@@ -39,7 +39,7 @@ public class VlcActivity extends Activity {
    row(root,button("HW / SW",()->{software=!software;startAt=player==null?0:player.getTime();startMedia();}),button("Speed",()->new AlertDialog.Builder(this).setItems(ProPrefs.speeds,(d,w)->{if(player!=null)player.setRate(ProPrefs.rates[w]);}).show()),button("Sync",()->sync()));
    row(root,button("Subtitle file",()->{Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT).setType("*/*").addCategory(Intent.CATEGORY_OPENABLE).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);startActivityForResult(i,19);}),button("Cast",()->castMenu()),button("Back",this::finish));setContentView(root);
    if(source==null){info.setText("No media");return;}
-   try{engine=new LibVLC(this,new ArrayList<String>());player=new MediaPlayer(engine);player.attachViews(video,null,true,false);
+   try{ArrayList<String> opts=new ArrayList<>();int cores=ProPrefs.number(this,"cpu_cores",0);if(cores>0)opts.add("--avcodec-threads="+cores);String lang=ProPrefs.string(this,"preferred_audio","");if(!lang.isEmpty())opts.add("--audio-language="+lang);String sublang=ProPrefs.string(this,"preferred_subtitle","");if(!sublang.isEmpty())opts.add("--sub-language="+sublang);engine=new LibVLC(this,opts);player=new MediaPlayer(engine);player.attachViews(video,null,true,false);
      player.setEventListener(event->{if(event.type==MediaPlayer.Event.Playing){started=true;runOnUiThread(()->{if(player!=null){if(startAt>0){player.setTime(startAt);startAt=0;}player.setAudioDelay(audioOffset);player.setSpuDelay(subtitleOffset);}});}else if(event.type==MediaPlayer.Event.EncounteredError){failed=true;runOnUiThread(()->info.setText("LibVLC: media could not be opened"));}});
      startMedia();handler.post(tick);
    }catch(Exception|LinkageError e){failed=true;info.setText("LibVLC unavailable: "+e.getClass().getSimpleName());}

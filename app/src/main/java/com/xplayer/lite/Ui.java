@@ -45,6 +45,10 @@ final class Ui{
  case "file":path(c,5,2,15,2,20,7,20,22,5,22,5,2);path(c,15,2,15,7,20,7);break;
  case "decoder":c.drawRoundRect(5,5,19,19,2,2,p);c.drawRect(9,9,15,15,p);for(int i=7;i<=17;i+=5){line(c,i,2,i,5);line(c,i,19,i,22);line(c,2,i,5,i);line(c,19,i,22,i);}break;
  case "info":c.drawCircle(12,12,9,p);line(c,12,11,12,17);c.drawCircle(12,7,.7f,p);break;
+ case "moon":c.drawArc(3,3,21,21,65,260,false,p);c.drawArc(10,1,25,16,85,175,false,p);break;
+ case "mute":path(c,3,9,7,9,12,4,12,20,7,15,3,15,3,9);line(c,16,9,22,15);line(c,22,9,16,15);break;
+ case "shuffle":path(c,3,5,8,5,16,19,21,19,18,16);path(c,3,19,8,19,16,5,21,5,18,2);break;
+ case "camera":c.drawRoundRect(2,6,22,21,2,2,p);c.drawCircle(12,13,4,p);path(c,8,6,9,3,15,3,16,6);break;
  case "repeat":path(c,4,8,20,8,16,4);path(c,20,16,4,16,8,20);line(c,4,8,4,13);line(c,20,11,20,16);break;
  case "equalizer":for(int x=5;x<=19;x+=7)line(c,x,3,x,21);c.drawCircle(5,9,2,p);c.drawCircle(12,15,2,p);c.drawCircle(19,7,2,p);break;
  default:c.drawCircle(12,12,9,p);break;
