@@ -1,11 +1,2 @@
-# X Download — Android 1.1 Lite
-Arabic-first link downloader without an internal browser. Android 10+; ARM64 only. yt-dlp and FFmpeg for supported media; Android DownloadManager for direct file URLs. Media jobs require the application to stay open. No DRM support. Download only authorized content.
-
-## Build
-JDK 17, Android SDK 36, Gradle 8.13. Run gradle :app:assembleDebug. Output app/build/outputs/apk/debug/app-debug.apk. Lite build uses a separate application ID to avoid signature conflicts with the previous test APK. Signature, archive integrity and ABI are checked by CI; physical device testing is pending. Debug builds use runner-local test signing; future updates may need uninstall/reinstall.
-
-## Dependencies and credits
-- https://github.com/yausername/youtubedl-android (0.18.1)
-- https://github.com/yt-dlp/yt-dlp
-- https://ffmpeg.org/
-Review and comply with upstream licenses and corresponding-source obligations before distributing binaries. This is a personal test build, not a production release.
+# X Player Lite
+Personal offline Android audio/video player, Java + AndroidX Media3 1.5.1. Minimum Android 6 (API 23), targeted at OPPO F11 Android 11. Uses Android device decoders with fallback to available platform decoders, no native ABI-specific libraries intended. No network or broad storage permission; uses Android file picker and incoming media intents. Includes subtitles, speed, seek, resume, PiP, fullscreen gestures. Background playback service is not included. Actual format/codec support varies with device. No guarantee of every media file. CI generates synthetic video/audio samples, builds debug APK, checks signature and metadata, and tests actual playback on Android 11 and 15 before publishing a verified artifact. No physical OPPO testing. Debug signature is for personal testing; future builds may need uninstall/reinstall. Media3 is Apache-2.0 licensed. 
