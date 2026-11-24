@@ -1,4 +1,4 @@
-name: Build and test X Player Pro preview 1
+name: Build and test X Player Pro preview 2
 on:
   push:
     branches: [x-player-pro]
@@ -113,6 +113,6 @@ jobs:
           path: candidate
       - uses: actions/upload-artifact@v4
         with:
-          name: XPlayer-Pro-preview1-TESTED
+          name: XPlayer-Pro-preview2-TESTED
           path: candidate/XPlayer-Pro.apk
           if-no-files-found: error
