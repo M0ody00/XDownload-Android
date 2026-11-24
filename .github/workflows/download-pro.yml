@@ -27,6 +27,10 @@ jobs:
           fi
           test -x "$SDKMANAGER"
           "$SDKMANAGER" --sdk_root="$ANDROID_HOME" 'platforms;android-36' 'build-tools;35.0.0'
+      - name: Generate synthetic audio fixture
+        run: |
+          mkdir -p app/src/androidTest/assets
+          ffmpeg -hide_banner -loglevel error -y -f lavfi -i sine=frequency=440:sample_rate=44100 -t 2 -c:a pcm_s16le app/src/androidTest/assets/sample.wav
       - run: gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace
       - run: |
           mkdir -p candidate
@@ -65,7 +69,7 @@ jobs:
             adb install -g candidate/XDownload-Pro.apk
             adb install -g candidate/test.apk
             adb shell am instrument -w com.xdownload.pro.test/androidx.test.runner.AndroidJUnitRunner | tee result.txt
-            grep -F 'OK (1 test)' result.txt
+            grep -F 'OK (2 tests)' result.txt
   verified:
     needs: [build, emulator]
     runs-on: ubuntu-latest
