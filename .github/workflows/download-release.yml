@@ -1,0 +1,64 @@
+name: X Download Pro owner-signed release
+on:
+  workflow_dispatch:
+    inputs:
+      verified_run:
+        description: Successful verification workflow run ID from the same commit
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+jobs:
+  signed:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/x-download-pro'
+    environment: xdownload-release
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require successful verification of this exact commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.verified_run }}
+        run: |
+          set -euo pipefail
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" > "$RUNNER_TEMP/verified.json"
+          python3 -c 'import json,os; r=json.load(open(os.environ["RUNNER_TEMP"]+"/verified.json")); assert r["conclusion"]=="success" and r["head_sha"]==os.environ["GITHUB_SHA"] and r["path"]==".github/workflows/download-pro.yml"'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Prepare Android SDK
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f | sort -V | tail -n 1)"
+          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" 'platforms;android-36' 'build-tools;35.0.0'
+      - name: Build with protected signing key and verify pinned certificate
+        env:
+          KEYSTORE_B64: ${{ secrets.XDOWNLOAD_KEYSTORE_B64 }}
+          XDOWNLOAD_STORE_PASSWORD: ${{ secrets.XDOWNLOAD_STORE_PASSWORD }}
+          XDOWNLOAD_KEY_ALIAS: ${{ secrets.XDOWNLOAD_KEY_ALIAS }}
+          XDOWNLOAD_KEY_PASSWORD: ${{ secrets.XDOWNLOAD_KEY_PASSWORD }}
+          CERT_SHA256: ${{ secrets.XDOWNLOAD_CERT_SHA256 }}
+        run: |
+          set -euo pipefail
+          umask 077
+          test -n "$KEYSTORE_B64"
+          test -n "$CERT_SHA256"
+          export XDOWNLOAD_KEYSTORE="$RUNNER_TEMP/owner-signing.jks"
+          trap 'rm -f "$XDOWNLOAD_KEYSTORE"' EXIT
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$XDOWNLOAD_KEYSTORE"
+          gradle --no-daemon :app:assembleRelease -PphoneAbi=arm64-v8a
+          mkdir -p release
+          cp app/build/outputs/apk/release/app-release.apk release/XDownload-Pro-ARM64.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs release/XDownload-Pro-ARM64.apk > "$RUNNER_TEMP/cert.txt"
+          python3 -c 'import os,re; text=open(os.environ["RUNNER_TEMP"]+"/cert.txt").read(); actual=re.search(r"certificate SHA-256 digest: ([0-9a-fA-F]+)",text).group(1); expected=os.environ["CERT_SHA256"].replace(":","").lower(); assert actual.lower()==expected, "Certificate fingerprint mismatch"'
+          unzip -tq release/XDownload-Pro-ARM64.apk
+          sha256sum release/XDownload-Pro-ARM64.apk > release/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: XDownload-Pro-owner-signed-ARM64
+          path: release/
