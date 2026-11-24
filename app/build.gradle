@@ -3,12 +3,12 @@ android {
  namespace 'com.xplayer.lite'
  compileSdk 36
  defaultConfig {
-  applicationId 'com.xplayer.pro.installfix'
+  applicationId 'com.xplayer.pro.mediafix'
   minSdk 24
   if (project.hasProperty('phoneAbi')) { ndk { abiFilters project.property('phoneAbi').toString() } }
   targetSdk 34
-  versionCode 10
-  versionName '3.3.1-installfix'
+  versionCode 11
+  versionName '3.3.2-mediafix'
   testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
  }
  packaging { jniLibs { pickFirsts += ['**/libc++_shared.so'] } }

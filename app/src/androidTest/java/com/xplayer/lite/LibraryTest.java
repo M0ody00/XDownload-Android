@@ -25,7 +25,7 @@ public class LibraryTest {
       AtomicBoolean ok=new AtomicBoolean();long until=android.os.SystemClock.elapsedRealtime()+15000;
       while(android.os.SystemClock.elapsedRealtime()<until){s.onActivity(a->ok.set(a.hasMediaForTest("xplayer-library-test.mp4")&&a.hasMediaForTest("xplayer-library-test.mp3")&&a.hasFolderForTest("XPlayerTestFolder")));if(ok.get())break;Thread.sleep(200);}
       assertTrue("Video and audio should be discovered automatically with video folder",ok.get());
-      s.onActivity(a->{a.audioForTest();assertTrue("Audio folder should be listed",a.hasFolderForTest("XPlayerTestAudio"));assertTrue(a.rowsForTest()>0);});
+      s.onActivity(a->{assertTrue("Folder details must be left-aligned directly below title",a.folderMetadataAlignedForTest("XPlayerTestFolder"));a.audioForTest();assertTrue("Audio folder should be listed",a.hasFolderForTest("XPlayerTestAudio"));assertTrue(a.rowsForTest()>0);});
       android.util.Log.i("XPlayerTest","PASS automatic MediaStore discovery and folder filtering");
     }
   } finally {if(video!=null)app.getContentResolver().delete(video,null,null);if(audio!=null)app.getContentResolver().delete(audio,null,null);}
