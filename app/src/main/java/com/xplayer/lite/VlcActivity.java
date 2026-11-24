@@ -27,11 +27,11 @@ public class VlcActivity extends Activity {
  private AlertDialog castDialog;
  private android.widget.ArrayAdapter<String> castAdapter;
  private final Runnable tick=new Runnable(){public void run(){if(player==null)return;long len=player.getLength(),pos=player.getTime();if(len>0&&!tracking)seek.setProgress((int)Math.min(1000,Math.max(0,pos*1000/len)));if(!failed)info.setText((software?"SW":"HW")+" • VLC   "+Math.max(0,pos/1000)+" / "+Math.max(0,len/1000)+" s");handler.postDelayed(this,400);}};
- private Button button(String title,Runnable r){Button b=new Button(this);b.setText(title);b.setAllCaps(false);b.setOnClickListener(v->r.run());return b;}
+ private Button button(String title,Runnable r){Button b=new Button(this);b.setText(title);b.setAllCaps(false);b.setTextColor(Ui.WHITE);b.setTextSize(12);b.setBackgroundColor(Ui.PANEL);b.setOnClickListener(v->r.run());return b;}
  private void row(LinearLayout root,Button... buttons){LinearLayout r=new LinearLayout(this);for(Button b:buttons)r.addView(b,new LinearLayout.LayoutParams(0,-2,1));root.addView(r);}
  @Override public void onCreate(Bundle b){
    super.onCreate(b);source=getIntent().getData();startAt=getIntent().getLongExtra("position",0);software=getIntent().getBooleanExtra("software",true);
-   LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(0xff121923);
+   LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(Ui.BLACK);
    info=new TextView(this);info.setTextColor(Color.WHITE);info.setTextSize(15);info.setPadding(12,12,12,12);info.setText("LibVLC • Software");root.addView(info);
    video=new VLCVideoLayout(this);root.addView(video,new LinearLayout.LayoutParams(-1,0,1));seek=new SeekBar(this);seek.setMax(1000);root.addView(seek);
    seek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){public void onStartTrackingTouch(SeekBar b){tracking=true;}public void onStopTrackingTouch(SeekBar b){if(player!=null&&player.getLength()>0)player.setTime(player.getLength()*b.getProgress()/1000);tracking=false;}public void onProgressChanged(SeekBar b,int p,boolean user){}});

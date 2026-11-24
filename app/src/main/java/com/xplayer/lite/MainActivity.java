@@ -41,7 +41,7 @@ import java.util.Collections;
 import java.util.Locale;
 
 public class MainActivity extends Activity {
-    private static final int BG=0xff121923, PANEL=0xff243342, INK=0xfff5f7fa, ACCENT=0xff44e7b2;
+    private static final int BG=Ui.BLACK, PANEL=Ui.PANEL, INK=Ui.WHITE, ACCENT=Ui.BLUE;
     private static final int OPEN=101, SUBTITLE=102;
     ExoPlayer player;
     boolean renderedFrame=false;
@@ -63,12 +63,18 @@ public class MainActivity extends Activity {
     private boolean horizontal=false,vertical=false;
     private float initialSpan=0;
     private TextView unlock;
+    private FrameLayout videoFrame;
+    private SeekBar timeline;
+    private TextView elapsed,total;
+    private ImageView playIcon;
+    private boolean dragging=false,controlsVisible=true;
+    private final Runnable autoHide=()->{if(player!=null&&player.isPlaying()&&!locked&&!dragging)setControls(false);};
     private Equalizer eq;
     private BassBoost bass;
     private LoudnessEnhancer boost;
     private int effectSession=-1;
     private final Handler handler=new Handler(Looper.getMainLooper());
-    private final Runnable clock=new Runnable(){public void run(){if(player==null)return;if(sleepUntil>0&&android.os.SystemClock.elapsedRealtime()>=sleepUntil){sleepUntil=0;player.pause();status.setText("انتهى مؤقت النوم");}if(aPoint>=0&&bPoint>aPoint&&player.getCurrentPosition()>=bPoint)player.seekTo(aPoint);handler.postDelayed(this,ProPrefs.flag(MainActivity.this,"lite_mode",false)&&bPoint<0?1000:200);}};
+    private final Runnable clock=new Runnable(){public void run(){if(player==null)return;updateProgress();if(sleepUntil>0&&android.os.SystemClock.elapsedRealtime()>=sleepUntil){sleepUntil=0;player.pause();status.setText("انتهى مؤقت النوم");}if(aPoint>=0&&bPoint>aPoint&&player.getCurrentPosition()>=bPoint)player.seekTo(aPoint);handler.postDelayed(this,ProPrefs.flag(MainActivity.this,"lite_mode",false)&&bPoint<0?1000:200);}};
     private long stepMs(){int[] steps={5,10,15,30};return steps[Math.max(0,Math.min(3,ProPrefs.number(this,"seek",1)))]*1000L;}
     private void seekBy(long d){long end=player.getDuration(),n=Math.max(0,player.getCurrentPosition()+d);player.seekTo(end>0?Math.min(end,n):n);}
 
@@ -85,30 +91,36 @@ public class MainActivity extends Activity {
         getWindow().setStatusBarColor(BG);getWindow().setNavigationBarColor(BG);
         audio=(AudioManager)getSystemService(AUDIO_SERVICE);
         setVolumeControlStream(AudioManager.STREAM_MUSIC);
-        LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(BG);
-        header=new LinearLayout(this);header.setOrientation(LinearLayout.VERTICAL);
-        TextView logo=label("X PLAYER PRO",24,ProPrefs.accent(this));logo.setTypeface(null,Typeface.BOLD);header.addView(logo);
-        title=label("اختر فيديو أو ملف صوتي",15,INK);title.setMaxLines(2);header.addView(title);
-        root.addView(header);
-        screen=new PlayerView(this);screen.setBackgroundColor(Color.BLACK);screen.setUseController(true);screen.setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING);
-        android.widget.FrameLayout videoFrame=new android.widget.FrameLayout(this);videoFrame.addView(screen,new android.widget.FrameLayout.LayoutParams(-1,-1));unlock=label("🔒 إلغاء القفل",16,INK);unlock.setBackground(bg(PANEL));unlock.setVisibility(View.GONE);android.widget.FrameLayout.LayoutParams lockPos=new android.widget.FrameLayout.LayoutParams(-2,-2,Gravity.TOP|Gravity.RIGHT);lockPos.setMargins(0,dp(12),dp(12),0);videoFrame.addView(unlock,lockPos);unlock.setOnClickListener(v->setLocked(false));
-        root.addView(videoFrame,new LinearLayout.LayoutParams(-1,0,1));
-        tools=new LinearLayout(this);tools.setOrientation(LinearLayout.VERTICAL);tools.setPadding(dp(6),dp(3),dp(6),dp(4));
-        status=label("جاهز • يعمل دون إنترنت",13,INK);tools.addView(status);
-        LinearLayout first=new LinearLayout(this);
-        Button open=button(ProPrefs.label(this,"فتح ملف","Open file"),true), speed=button(ProPrefs.label(this,"السرعة","Speed"),false), subs=button(ProPrefs.label(this,"الترجمة","Subtitles"),false);
-        addButton(first,open);addButton(first,speed);addButton(first,subs);tools.addView(first);
-        LinearLayout second=new LinearLayout(this);
-        Button back=button("−10 ثوانٍ",false), next=button("+10 ثوانٍ",false), fullscreen=button("ملء الشاشة",false), pip=button("عائم",false);
-        addButton(second,back);addButton(second,next);addButton(second,fullscreen);addButton(second,pip);tools.addView(second);
-        LinearLayout tracks=new LinearLayout(this);
-        Button previousFile=button(ProPrefs.label(this,"السابق","Previous"),false),nextFile=button(ProPrefs.label(this,"التالي","Next"),false),trackSettings=button(ProPrefs.label(this,"مسارات الصوت","Audio tracks"),false);
-        addButton(tracks,previousFile);addButton(tracks,nextFile);addButton(tracks,trackSettings);tools.addView(tracks);
-        previousFile.setOnClickListener(v->moveTrack(-1));nextFile.setOnClickListener(v->moveTrack(1));
-        trackSettings.setOnClickListener(v->new androidx.media3.ui.TrackSelectionDialogBuilder(this,"مسارات الصوت",player,C.TRACK_TYPE_AUDIO).build().show());
-        LinearLayout moreRow=new LinearLayout(this);Button more=button(ProPrefs.label(this,"⋮ أدوات المشغل","⋮ Player tools"),true),settings=button(ProPrefs.label(this,"الإعدادات","Settings"),false);addButton(moreRow,more);addButton(moreRow,settings);tools.addView(moreRow);
-        more.setOnClickListener(v->showMore());settings.setOnClickListener(v->startActivity(new Intent(this,SettingsActivity.class)));
-        root.addView(tools);setContentView(root);
+        videoFrame=new FrameLayout(this);videoFrame.setBackgroundColor(Color.BLACK);videoFrame.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
+        screen=new PlayerView(this);screen.setBackgroundColor(Color.BLACK);screen.setUseController(false);screen.setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING);videoFrame.addView(screen,new FrameLayout.LayoutParams(-1,-1));screen.setOnClickListener(v->toggleControls());
+        header=new LinearLayout(this);header.setOrientation(LinearLayout.VERTICAL);header.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,new int[]{0xdc000000,0x00000000}));header.setPadding(dp(6),dp(4),dp(6),dp(12));
+        LinearLayout top=new LinearLayout(this);top.setGravity(Gravity.CENTER_VERTICAL);
+        top.addView(Ui.action(this,"back","Back",INK,this::finish),new LinearLayout.LayoutParams(dp(44),dp(48)));
+        title=label("X Player Pro",17,INK);title.setMaxLines(2);title.setEllipsize(android.text.TextUtils.TruncateAt.END);top.addView(title,new LinearLayout.LayoutParams(0,-2,1));
+        TextView decoder=label("HW",15,INK);decoder.setGravity(Gravity.CENTER);decoder.setContentDescription("Decoder");decoder.setOnClickListener(v->decoderMenu());top.addView(decoder,new LinearLayout.LayoutParams(dp(50),dp(48)));
+        top.addView(Ui.action(this,"more","Player tools",INK,this::showMore),new LinearLayout.LayoutParams(dp(44),dp(48)));header.addView(top);
+        LinearLayout quick=new LinearLayout(this);quick.setGravity(Gravity.CENTER_VERTICAL);
+        quick.addView(Ui.shortcut(this,"audio",tr("الصوت","Audio"),INK,()->audioTrackMenu()),new LinearLayout.LayoutParams(0,dp(56),1));
+        TextView speed=label("1×",17,INK);speed.setGravity(Gravity.CENTER);speed.setOnClickListener(v->chooseSpeed());speed.setContentDescription("Playback speed");quick.addView(speed,new LinearLayout.LayoutParams(0,dp(56),1));
+        quick.addView(Ui.shortcut(this,"music",tr("خلفية","Background"),INK,this::background),new LinearLayout.LayoutParams(0,dp(56),1));
+        quick.addView(Ui.shortcut(this,"repeat",tr("تكرار","Repeat"),INK,()->{if(player!=null){player.setRepeatMode(player.getRepeatMode()==Player.REPEAT_MODE_ONE?Player.REPEAT_MODE_OFF:Player.REPEAT_MODE_ONE);Toast.makeText(this,player.getRepeatMode()==Player.REPEAT_MODE_ONE?"Repeat on":"Repeat off",Toast.LENGTH_SHORT).show();}}),new LinearLayout.LayoutParams(0,dp(56),1));
+        quick.addView(Ui.shortcut(this,"equalizer","EQ",INK,this::audioEffects),new LinearLayout.LayoutParams(0,dp(56),1));header.addView(quick);
+        videoFrame.addView(header,new FrameLayout.LayoutParams(-1,-2,Gravity.TOP));
+        tools=new LinearLayout(this);tools.setOrientation(LinearLayout.VERTICAL);tools.setPadding(dp(12),dp(16),dp(12),dp(12));tools.setBackground(new GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP,new int[]{0xe6000000,0x00000000}));
+        status=label("",12,INK);status.setVisibility(View.GONE);tools.addView(status);
+        LinearLayout progress=new LinearLayout(this);progress.setGravity(Gravity.CENTER_VERTICAL);elapsed=label("00:00",12,INK);elapsed.setPadding(0,0,0,0);progress.addView(elapsed,new LinearLayout.LayoutParams(dp(52),-2));timeline=new SeekBar(this);timeline.setMax(1000);timeline.setProgressTintList(android.content.res.ColorStateList.valueOf(Ui.BLUE));timeline.setThumbTintList(android.content.res.ColorStateList.valueOf(0xff65b6fb));progress.addView(timeline,new LinearLayout.LayoutParams(0,dp(40),1));total=label("00:00",12,INK);total.setPadding(0,0,0,0);total.setGravity(Gravity.RIGHT);progress.addView(total,new LinearLayout.LayoutParams(dp(52),-2));tools.addView(progress);
+        timeline.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){public void onStartTrackingTouch(SeekBar b){dragging=true;handler.removeCallbacks(autoHide);}public void onStopTrackingTouch(SeekBar b){if(player!=null&&player.getDuration()>0)player.seekTo(player.getDuration()*b.getProgress()/1000);dragging=false;armHide();}public void onProgressChanged(SeekBar b,int n,boolean user){if(user&&player!=null&&player.getDuration()>0)elapsed.setText(timeText(player.getDuration()*n/1000));}});
+        LinearLayout controls=new LinearLayout(this);controls.setGravity(Gravity.CENTER);
+        controls.addView(Ui.action(this,"lock","Lock controls",INK,()->setLocked(true)),new LinearLayout.LayoutParams(dp(48),dp(54)));
+        controls.addView(new View(this),new LinearLayout.LayoutParams(0,1,1));
+        controls.addView(Ui.action(this,"prev","Previous file",INK,()->{moveTrack(-1);armHide();}),new LinearLayout.LayoutParams(dp(48),dp(54)));
+        playIcon=Ui.action(this,"play","Play or pause",INK,()->{if(player!=null){if(player.isPlaying())player.pause();else player.play();armHide();}});controls.addView(playIcon,new LinearLayout.LayoutParams(dp(64),dp(64)));
+        controls.addView(Ui.action(this,"next","Next file",INK,()->{moveTrack(1);armHide();}),new LinearLayout.LayoutParams(dp(48),dp(54)));
+        controls.addView(new View(this),new LinearLayout.LayoutParams(0,1,1));
+        controls.addView(Ui.action(this,"ratio","Aspect ratio",INK,()->ratioMenu()),new LinearLayout.LayoutParams(dp(48),dp(54)));tools.addView(controls);
+        videoFrame.addView(tools,new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM));
+        unlock=label("Unlock",14,INK);unlock.setBackground(Ui.shape(this,0xaa202020,12));unlock.setVisibility(View.GONE);FrameLayout.LayoutParams lockPos=new FrameLayout.LayoutParams(-2,-2,Gravity.TOP|Gravity.RIGHT);lockPos.setMargins(0,dp(12),dp(12),0);videoFrame.addView(unlock,lockPos);unlock.setOnClickListener(v->setLocked(false));
+        setContentView(videoFrame);full=true;getWindow().getDecorView().setSystemUiVisibility(5894);
         DefaultRenderersFactory renderers=new DefaultRenderersFactory(this).setEnableDecoderFallback(true);
         player=new ExoPlayer.Builder(this,renderers).build();screen.setPlayer(player);
         player.setAudioAttributes(new AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(),true);
@@ -119,24 +131,27 @@ public class MainActivity extends Activity {
                 else if(state==Player.STATE_READY)status.setText("الملف جاهز • Ready");
                 else if(state==Player.STATE_ENDED){status.setText("انتهى التشغيل");savePosition();if(ProPrefs.flag(MainActivity.this,"auto_next",true)&&fromLibrary&&libraryQueue.indexOf(current)>=0&&(shuffle&&libraryQueue.size()>1||libraryQueue.indexOf(current)<libraryQueue.size()-1))moveTrack(1);}
             }
-            @Override public void onIsPlayingChanged(boolean playing){
+            @Override public void onIsPlayingChanged(boolean playing){if(playIcon!=null){playIcon.setImageDrawable(new Ui.Glyph(playing?"pause":"play",INK));if(playing)armHide();else{handler.removeCallbacks(autoHide);if(!locked)setControls(true);}}
                 if(playing){if(ProPrefs.flag(MainActivity.this,"keep_screen",true)&&!ProPrefs.flag(MainActivity.this,"lite_mode",false))getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);status.setText("جارٍ التشغيل");}
                 else {getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);if(player.getPlaybackState()==Player.STATE_READY)status.setText("متوقف مؤقتًا");}
             }
             @Override public void onRenderedFirstFrame(){renderedFrame=true;}
             @Override public void onPlayerError(PlaybackException e){status.setText("تعذّر التشغيل: "+e.getErrorCodeName());if(current!=null&&!fallbackAttempted&&ProPrefs.flag(MainActivity.this,"auto_decoder",true)&&("content".equals(current.getScheme())||"file".equals(current.getScheme()))&&(e.errorCode==PlaybackException.ERROR_CODE_DECODER_INIT_FAILED||e.errorCode==PlaybackException.ERROR_CODE_DECODING_FAILED||e.errorCode==PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED||e.errorCode==PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES||e.errorCode==PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED)){fallbackAttempted=true;handler.post(()->{if(!isFinishing()&&player!=null)openVlc(true);});return;}new AlertDialog.Builder(MainActivity.this).setTitle("تعذّر فتح الملف").setMessage("قد تكون صيغة الترميز غير مدعومة على هذا الجهاز أو الملف تالفًا.\n"+e.getErrorCodeName()).setPositiveButton("حسنًا",null).setNeutralButton("LibVLC / SW",(d,w)->openVlc(true)).show();}
         });
-        open.setOnClickListener(v->pick(false));
-        subs.setOnClickListener(v->{if(current==null){Toast.makeText(this,"افتح ملفًا أولًا",Toast.LENGTH_SHORT).show();return;}pick(true);});
-        speed.setOnClickListener(v->chooseSpeed());
-        back.setOnClickListener(v->seekBy(-stepMs()));
-        next.setOnClickListener(v->seekBy(stepMs()));
-        fullscreen.setOnClickListener(v->setFullscreen(!full));
-        pip.setOnClickListener(v->enterPip());
         if(state!=null && state.getString("uri")!=null){fromLibrary=getIntent().getBooleanExtra("library",false);current=Uri.parse(state.getString("uri"));openMedia(current,false);player.seekTo(state.getLong("position"));player.setPlayWhenReady(state.getBoolean("play"));}
         else handle(getIntent());
-        applyPrefs();handler.post(clock);
+        applyPrefs();handler.post(clock);armHide();
     }
+    private String tr(String ar,String en){return ProPrefs.label(this,ar,en);}
+    private void updateProgress(){if(timeline==null||player==null||dragging)return;long d=player.getDuration(),pos=Math.max(0,player.getCurrentPosition());elapsed.setText(timeText(pos));total.setText(timeText(d));timeline.setProgress(d>0?(int)Math.min(1000,pos*1000/d):0);}
+    private String timeText(long ms){long s=Math.max(0,ms/1000);return s>=3600?String.format(Locale.ROOT,"%d:%02d:%02d",s/3600,s/60%60,s%60):String.format(Locale.ROOT,"%02d:%02d",s/60,s%60);}
+    private void setControls(boolean show){controlsVisible=show;header.setVisibility(show&&!locked?View.VISIBLE:View.GONE);tools.setVisibility(show&&!locked?View.VISIBLE:View.GONE);}
+    private void armHide(){handler.removeCallbacks(autoHide);if(player!=null&&player.isPlaying()&&!locked)handler.postDelayed(autoHide,3500);}
+    private void toggleControls(){if(locked)return;setControls(!controlsVisible);if(controlsVisible)armHide();}
+    private void decoderMenu(){handler.removeCallbacks(autoHide);new AlertDialog.Builder(this).setTitle("Decoder").setItems(new String[]{"Media3 • HW / Auto","LibVLC • HW","LibVLC • SW"},(d,w)->{if(w==1)openVlc(false);else if(w==2)openVlc(true);else armHide();}).setOnDismissListener(d->armHide()).show();}
+    private void audioTrackMenu(){if(player!=null)new androidx.media3.ui.TrackSelectionDialogBuilder(this,tr("مسارات الصوت","Audio tracks"),player,C.TRACK_TYPE_AUDIO).build().show();}
+    private void ratioMenu(){new AlertDialog.Builder(this).setTitle(tr("نسبة العرض","Aspect ratio")).setItems(new String[]{"Fit","Zoom","Stretch"},(d,w)->applyResize(w)).show();}
+    private void subtitleMenu(){if(player==null||current==null)return;new AlertDialog.Builder(this).setTitle(tr("الترجمة","Subtitles")).setItems(new String[]{tr("مسارات مدمجة","Embedded tracks"),tr("فتح ملف ترجمة","Open subtitle file")},(d,w)->{if(w==0)new androidx.media3.ui.TrackSelectionDialogBuilder(this,"Subtitles",player,C.TRACK_TYPE_TEXT).build().show();else pick(true);}).show();}
     private void pick(boolean text){
         Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.addCategory(Intent.CATEGORY_OPENABLE);i.setType("*/*");
         if(!text)i.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"video/*","audio/*","application/octet-stream","application/ogg"});
@@ -186,8 +201,16 @@ public class MainActivity extends Activity {
     void setSleepForTest(long millis){sleepUntil=millis>0?android.os.SystemClock.elapsedRealtime()+millis:0;}
     private void sleepMenu(){String[] a={"إلغاء المؤقت","5 دقائق","15 دقيقة","30 دقيقة","60 دقيقة","90 دقيقة"};int[] m={0,5,15,30,60,90};new AlertDialog.Builder(this).setTitle("مؤقت النوم").setItems(a,(d,w)->{setSleepForTest(m[w]*60000L);status.setText(w==0?"المؤقت متوقف":"المؤقت: "+m[w]+" دقيقة");}).show();}
     private void abMenu(){new AlertDialog.Builder(this).setTitle("تكرار A–B").setMessage("A: "+(aPoint<0?"—":aPoint/1000+"s")+"   B: "+(bPoint<0?"—":bPoint/1000+"s")).setItems(new String[]{"تعيين البداية A","تعيين النهاية B","إلغاء التكرار"},(d,w)->{if(w==0){aPoint=player.getCurrentPosition();bPoint=-1;status.setText("تم تحديد A");}else if(w==1){long n=player.getCurrentPosition();if(aPoint>=0&&n>aPoint+300){bPoint=n;player.seekTo(aPoint);status.setText("تكرار A–B");}else Toast.makeText(this,"حدد A أولًا ثم B بعده",Toast.LENGTH_SHORT).show();}else{aPoint=bPoint=-1;status.setText("تم إلغاء التكرار");}}).show();}
-    private void setLocked(boolean value){locked=value;screen.setUseController(!value);if(value){header.setVisibility(View.GONE);tools.setVisibility(View.GONE);screen.hideController();unlock.setVisibility(View.VISIBLE);}else{unlock.setVisibility(View.GONE);header.setVisibility(full?View.GONE:View.VISIBLE);tools.setVisibility(full?View.GONE:View.VISIBLE);screen.showController();}}
-    private void showMore(){String[] opts={"نسبة العرض","قفل الشاشة","مؤقت النوم","تكرار A–B","تكرار الملف","تشغيل عشوائي من القائمة","معادل الصوت والتعزيز","مسارات الترجمة المدمجة","إضافة / إزالة من المفضلة","الإعدادات","LibVLC / SW","تشغيل في الخلفية","قص الفيديو / استخراج الصوت","LibVLC / HW","حفظ لقطة من الفيديو","تدوير الشاشة"};new AlertDialog.Builder(this).setTitle("أدوات المشغل").setItems(opts,(d,w)->{switch(w){case 0:new AlertDialog.Builder(this).setTitle("نسبة العرض").setItems(new String[]{"ملاءمة","تكبير","تمديد"},(a,b)->applyResize(b)).show();break;case 1:setLocked(true);break;case 2:sleepMenu();break;case 3:abMenu();break;case 4:player.setRepeatMode(player.getRepeatMode()==Player.REPEAT_MODE_ONE?Player.REPEAT_MODE_OFF:Player.REPEAT_MODE_ONE);status.setText(player.getRepeatMode()==Player.REPEAT_MODE_ONE?"تكرار الملف مفعّل":"التكرار متوقف");break;case 5:if(fromLibrary&&libraryQueue.size()>1){shuffle=!shuffle;status.setText(shuffle?"التشغيل العشوائي مستمر":"التشغيل العشوائي متوقف");}else Toast.makeText(this,"افتح ملفًا من المكتبة أولًا",Toast.LENGTH_SHORT).show();break;case 6:audioEffects();break;case 7:new androidx.media3.ui.TrackSelectionDialogBuilder(this,"الترجمة",player,C.TRACK_TYPE_TEXT).build().show();break;case 8:if(current!=null)status.setText(ProPrefs.toggle(this,current)?"أضيف للمفضلة":"أزيل من المفضلة");break;case 9:startActivity(new Intent(this,SettingsActivity.class));break;case 10:openVlc(true);break;case 11:background();break;case 12:exportMedia();break;case 13:openVlc(false);break;case 14:captureFrame();break;case 15:setRequestedOrientation(getResources().getConfiguration().orientation==Configuration.ORIENTATION_LANDSCAPE?android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT:android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);break;}}).show();}
+    private void setLocked(boolean value){locked=value;handler.removeCallbacks(autoHide);unlock.setVisibility(value?View.VISIBLE:View.GONE);setControls(!value);if(!value)armHide();}
+    private void showMore(){handler.removeCallbacks(autoHide);final android.app.Dialog dialog=new android.app.Dialog(this);ScrollView scroll=new ScrollView(this);LinearLayout body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);body.setPadding(dp(8),dp(12),dp(8),dp(12));body.setBackground(Ui.shape(this,0xff202124,14));scroll.addView(body);
+      String[] labels={tr("الصوت","Audio track"),tr("الترجمة","Subtitle"),tr("قائمة التشغيل","Playing queue"),tr("نسبة العرض","Aspect ratio"),tr("الإعدادات","Settings"),tr("المعلومات","Information"),tr("مشاركة","Share"),tr("المحرك","Decoder"),tr("مؤقت النوم","Sleep timer"),"A–B",tr("عشوائي","Shuffle"),tr("لقطة","Snapshot"),tr("قص / تحويل","Export"),"PiP",tr("تدوير","Rotate"),tr("فتح ملف","Open file"),tr("المفضلة","Favorite"),tr("الخلفية","Background"),tr("معادل الصوت","Equalizer"),tr("قفل","Lock")};
+      String[] icons={"music","subtitle","list","ratio","settings","info","share","decoder","clock","repeat","repeat","view","file","view","refresh","folder","star","music","equalizer","lock"};
+      Runnable[] actions={this::audioTrackMenu,this::subtitleMenu,this::queueMenu,this::ratioMenu,()->startActivity(new Intent(this,SettingsActivity.class)),this::infoMenu,this::shareMedia,this::decoderMenu,this::sleepMenu,this::abMenu,()->{shuffle=!shuffle;Toast.makeText(this,shuffle?"Shuffle on":"Shuffle off",Toast.LENGTH_SHORT).show();},this::captureFrame,this::exportMedia,this::enterPip,()->setRequestedOrientation(getResources().getConfiguration().orientation==Configuration.ORIENTATION_LANDSCAPE?android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT:android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE),()->pick(false),()->{if(current!=null)Toast.makeText(this,ProPrefs.toggle(this,current)?"Favorite added":"Favorite removed",Toast.LENGTH_SHORT).show();},this::background,this::audioEffects,()->setLocked(true)};
+      for(int r=0;r<5;r++){LinearLayout row=new LinearLayout(this);for(int c=0;c<4;c++){int i=r*4+c;row.addView(Ui.shortcut(this,icons[i],labels[i],INK,()->{dialog.dismiss();actions[i].run();}),new LinearLayout.LayoutParams(0,dp(80),1));}body.addView(row);}dialog.setContentView(scroll);android.view.Window w=dialog.getWindow();if(w!=null){w.setBackgroundDrawableResource(android.R.color.transparent);w.setGravity(Gravity.BOTTOM);w.setLayout(-1,Math.min(dp(440),(int)(getResources().getDisplayMetrics().heightPixels*.75)));}dialog.setOnDismissListener(d->armHide());dialog.show();if(w!=null)w.setLayout(-1,Math.min(dp(440),(int)(getResources().getDisplayMetrics().heightPixels*.75)));
+    }
+    private void queueMenu(){if(libraryQueue.isEmpty()){Toast.makeText(this,"No queue",Toast.LENGTH_SHORT).show();return;}String[] names=new String[libraryQueue.size()];for(int i=0;i<names.length;i++)names[i]=displayName(libraryQueue.get(i));new AlertDialog.Builder(this).setTitle("Playing queue").setSingleChoiceItems(names,libraryQueue.indexOf(current),(d,w)->{openMedia(libraryQueue.get(w),true);d.dismiss();}).setNegativeButton("Close",null).show();}
+    private void infoMenu(){if(current==null||player==null)return;new AlertDialog.Builder(this).setTitle(displayName(current)).setMessage("Duration: "+timeText(player.getDuration())+"\nVideo: "+player.getVideoSize().width+" × "+player.getVideoSize().height+"\nEngine: Media3").setPositiveButton("OK",null).show();}
+    private void shareMedia(){if(current==null||!"content".equals(current.getScheme()))return;Intent i=new Intent(Intent.ACTION_SEND).setType(getContentResolver().getType(current)==null?"*/*":getContentResolver().getType(current)).putExtra(Intent.EXTRA_STREAM,current).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);i.setClipData(android.content.ClipData.newRawUri("Media",current));startActivity(Intent.createChooser(i,"Share media"));}
     private void captureFrame(){if(player==null||!renderedFrame){Toast.makeText(this,"شغّل فيديو أولًا",Toast.LENGTH_SHORT).show();return;}View v=screen.getVideoSurfaceView();if(!(v instanceof android.view.SurfaceView)||v.getWidth()<1||v.getHeight()<1){Toast.makeText(this,"لقطة الفيديو غير متاحة",Toast.LENGTH_SHORT).show();return;}int w=v.getWidth(),h=v.getHeight();float scale=Math.min(1f,1920f/Math.max(w,h));android.graphics.Bitmap b=android.graphics.Bitmap.createBitmap(Math.max(1,(int)(w*scale)),Math.max(1,(int)(h*scale)),android.graphics.Bitmap.Config.ARGB_8888);try{android.view.PixelCopy.request((android.view.SurfaceView)v,b,result->{if(result!=android.view.PixelCopy.SUCCESS||isFinishing()){b.recycle();return;}if(screenshot!=null)screenshot.recycle();screenshot=b;Intent i=new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("image/png").putExtra(Intent.EXTRA_TITLE,"XPlayer-frame.png");startActivityForResult(i,103);},handler);}catch(Exception e){b.recycle();Toast.makeText(this,"تعذر التقاط الفيديو",Toast.LENGTH_SHORT).show();}}
     private void openVlc(boolean sw){if(current==null)return;player.pause();startActivity(new Intent(this,VlcActivity.class).setData(current).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION).putExtra("software",sw).putExtra("position",player.getCurrentPosition()));}
     private void background(){if(current==null)return;try{Intent i=new Intent(this,BackgroundService.class).setAction("xplayer.BACKGROUND").setData(current).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION).putExtra("position",player.getCurrentPosition()).putExtra("title",displayName(current));if(fromLibrary){int index=libraryQueue.indexOf(current);java.util.ArrayList<Uri> q=new java.util.ArrayList<>();if(index>=0){for(int n=index;n<libraryQueue.size()&&q.size()<500;n++)q.add(libraryQueue.get(n));}i.putParcelableArrayListExtra("queue",q);}i.putExtra("speed",player.getPlaybackParameters().speed);i.putExtra("shuffle",shuffle);player.pause();startService(i);finish();}catch(Exception e){Toast.makeText(this,"Background unavailable: "+e.getMessage(),Toast.LENGTH_LONG).show();}}
@@ -203,12 +226,13 @@ public class MainActivity extends Activity {
     private interface IntAction{void accept(int v);}
     private SeekBar.OnSeekBarChangeListener listener(IntAction c){return new SeekBar.OnSeekBarChangeListener(){public void onStartTrackingTouch(SeekBar b){}public void onStopTrackingTouch(SeekBar b){}public void onProgressChanged(SeekBar b,int p,boolean user){if(user)c.accept(p);}};}
 
-    private void setFullscreen(boolean f){full=f;header.setVisibility(f?View.GONE:View.VISIBLE);tools.setVisibility(f?View.GONE:View.VISIBLE);getWindow().getDecorView().setSystemUiVisibility(f?5894:0);screen.showController();}
+    private void setFullscreen(boolean f){full=f;getWindow().getDecorView().setSystemUiVisibility(f?5894:0);setControls(true);armHide();}
     private void enterPip(){if(Build.VERSION.SDK_INT>=26&&getPackageManager().hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)&&current!=null){try{enterPictureInPictureMode(new PictureInPictureParams.Builder().setAspectRatio(new Rational(16,9)).build());}catch(Exception e){Toast.makeText(this,"الوضع العائم غير متاح",Toast.LENGTH_SHORT).show();}}else Toast.makeText(this,"الوضع العائم غير مدعوم أو لا يوجد ملف",Toast.LENGTH_SHORT).show();}
-    @Override public void onPictureInPictureModeChanged(boolean inPip,Configuration c){super.onPictureInPictureModeChanged(inPip,c);screen.setUseController(!inPip);header.setVisibility(inPip||full?View.GONE:View.VISIBLE);tools.setVisibility(inPip||full?View.GONE:View.VISIBLE);}
-    @Override public void onBackPressed(){if(locked){setLocked(false);return;}if(full){setFullscreen(false);return;}super.onBackPressed();}
+    @Override public void onPictureInPictureModeChanged(boolean inPip,Configuration c){super.onPictureInPictureModeChanged(inPip,c);setControls(!inPip);unlock.setVisibility(!inPip&&locked?View.VISIBLE:View.GONE);}
+    @Override public void onBackPressed(){if(locked){setLocked(false);return;}super.onBackPressed();}
     @Override public boolean dispatchTouchEvent(MotionEvent e){
-        if(locked)return super.dispatchTouchEvent(e);
+        if(locked||dragging||player==null)return super.dispatchTouchEvent(e);
+        if(controlsVisible&&e.getPointerCount()==1){float y=e.getY();if(y<header.getHeight()||y>videoFrame.getHeight()-tools.getHeight())return super.dispatchTouchEvent(e); }
         if(full&&current!=null&&audio!=null&&ProPrefs.flag(this,"gestures",true)&&e.getPointerCount()==2){float span=(float)Math.hypot(e.getX(0)-e.getX(1),e.getY(0)-e.getY(1));if(e.getActionMasked()==MotionEvent.ACTION_POINTER_DOWN)initialSpan=span;else if(e.getActionMasked()==MotionEvent.ACTION_MOVE&&initialSpan>0&&Math.abs(span-initialSpan)>dp(40)){applyResize(span>initialSpan?1:0);initialSpan=span;}return true;}
         if(full&&current!=null&&audio!=null&&ProPrefs.flag(this,"gestures",true)&&e.getPointerCount()==1){
             if(e.getActionMasked()==MotionEvent.ACTION_DOWN){downX=e.getX();downY=e.getY();downPosition=player.getCurrentPosition();horizontal=vertical=false;oldVolume=audio.getStreamVolume(AudioManager.STREAM_MUSIC);oldBrightness=getWindow().getAttributes().screenBrightness;if(oldBrightness<0)oldBrightness=.5f;}
@@ -220,7 +244,7 @@ public class MainActivity extends Activity {
                     else{WindowManager.LayoutParams p=getWindow().getAttributes();p.screenBrightness=Math.max(.05f,Math.min(1f,oldBrightness+dy/height));getWindow().setAttributes(p);}
                 }
             }
-            if(e.getActionMasked()==MotionEvent.ACTION_UP){if(horizontal||vertical)return true;if(Math.abs(e.getX()-downX)<dp(20)&&Math.abs(e.getY()-downY)<dp(20)&&ProPrefs.flag(this,"double_tap",true)){long now=android.os.SystemClock.elapsedRealtime();if(now-lastTap<300){seekBy(e.getX()>screen.getWidth()/2f?stepMs():-stepMs());lastTap=0;return true;}lastTap=now;}}
+            if(e.getActionMasked()==MotionEvent.ACTION_UP){if(horizontal||vertical){setControls(true);armHide();return true;}if(Math.abs(e.getX()-downX)<dp(20)&&Math.abs(e.getY()-downY)<dp(20)&&ProPrefs.flag(this,"double_tap",true)){long now=android.os.SystemClock.elapsedRealtime();if(now-lastTap<300){seekBy(e.getX()>screen.getWidth()/2f?stepMs():-stepMs());lastTap=0;return true;}lastTap=now;}}
         }
         return super.dispatchTouchEvent(e);
     }
