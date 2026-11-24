@@ -44,6 +44,7 @@ final class MediaEngine{
   if(bestAudio!=null)for(int rate:new int[]{128,192,320})audioChoices.put("mp3-"+rate,new Choice(id(bestAudio),"mp3","audio/mpeg","MP3 · "+rate+" kbps",duration>0?(long)(duration*rate*125):-1,true,true,true));
   ArrayList<Choice> result=new ArrayList<>(videos.values());result.addAll(audioChoices.values());if(result.isEmpty())throw new IOException("No supported downloadable audio/video formats found");return new Result(HttpEngine.safeName(info.optString("title","Media")),duration,result);
  }
+ static Choice recommend(Result r,boolean sound,long budget){Choice best=null;double score=-Double.MAX_VALUE;for(Choice c:r.choices){if(c.audio!=sound||c.size>budget)continue;double val=0;if(sound){val=c.mp3?-10:10;if(c.label.contains("128 kbps")||c.label.contains("192 kbps"))val+=40;}else{int h=0;try{h=Integer.parseInt(c.label.split("p")[0]);}catch(Exception ignored){}val=100-Math.abs(h-720)/12.0;if(c.ext.equals("mp4"))val+=10;}if(c.size<0)val-=30;if(c.size>0&&budget>0)val-=20.0*c.size/budget;if(val>score){score=val;best=c;}}return best;}
  static int mp3Rate(Choice choice){if(!choice.mp3)return 0;if(choice.label.contains("320 kbps"))return 320;if(choice.label.contains("192 kbps"))return 192;return 128;}
  static File transfer(Context c,Store.Job job,HttpEngine.Observer observer)throws Exception{
   init(c);if(!job.selector.matches("[A-Za-z0-9_.-]{1,100}(\\+[A-Za-z0-9_.-]{1,100})?")||!job.extension.matches("[a-z0-9]{1,8}"))throw new IOException("Invalid media format");
