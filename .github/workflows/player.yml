@@ -1,4 +1,4 @@
-name: Build and test X Player Pro preview 2
+name: Build and test X Player Pro preview 3
 on:
   push:
     branches: [x-player-pro]
@@ -45,7 +45,7 @@ jobs:
           "$BT/apksigner" verify --verbose "$APK"
           "$BT/aapt" dump badging "$APK" | tee apk-info.txt
           grep -F "package: name='com.xplayer.pro'" apk-info.txt
-          grep -F "sdkVersion:'23'" apk-info.txt
+          grep -F "sdkVersion:'24'" apk-info.txt
           mkdir -p candidate
           cp "$APK" candidate/XPlayer-Pro.apk
           cp app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk candidate/test.apk
@@ -85,7 +85,7 @@ jobs:
           adb shell am instrument -w -r com.xplayer.pro.test/androidx.test.runner.AndroidJUnitRunner | tee evidence/instrumentation.txt
           adb logcat -d -s XPlayerTest:I AndroidRuntime:E > evidence/playback-log.txt
           cat evidence/playback-log.txt
-          grep -E 'OK \(9 tests\)' evidence/instrumentation.txt
+          grep -E 'OK \(12 tests\)' evidence/instrumentation.txt
           if grep -E 'FAILURES!!!|INSTRUMENTATION_FAILED|Process crashed' evidence/instrumentation.txt; then exit 1; fi
           EOF
       - uses: reactivecircus/android-emulator-runner@v2
@@ -113,6 +113,6 @@ jobs:
           path: candidate
       - uses: actions/upload-artifact@v4
         with:
-          name: XPlayer-Pro-preview2-TESTED
+          name: XPlayer-Pro-preview3-TESTED
           path: candidate/XPlayer-Pro.apk
           if-no-files-found: error

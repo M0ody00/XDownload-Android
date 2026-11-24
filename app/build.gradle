@@ -4,12 +4,13 @@ android {
  compileSdk 36
  defaultConfig {
   applicationId 'com.xplayer.pro'
-  minSdk 23
+  minSdk 24
   targetSdk 34
-  versionCode 4
-  versionName '3.0-preview2'
+  versionCode 5
+  versionName '3.0-preview3'
   testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
  }
+ packaging { jniLibs { pickFirsts += ['**/libc++_shared.so'] } }
  compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
 }
 dependencies {
@@ -17,6 +18,7 @@ dependencies {
  implementation 'androidx.media3:media3-ui:1.5.1'
  implementation 'androidx.media3:media3-session:1.5.1'
  implementation 'org.videolan.android:libvlc-all:3.6.1'
+ implementation 'dev.ffmpegkit-maintained:ffmpeg-kit-audio:8.1.7'
  implementation 'androidx.media3:media3-transformer:1.5.1'
  implementation 'androidx.media3:media3-exoplayer-hls:1.5.1'
  implementation 'androidx.media3:media3-exoplayer-dash:1.5.1'
