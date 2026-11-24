@@ -3,17 +3,22 @@ android {
  namespace 'com.xdownload.mobile'
  compileSdk 36
  defaultConfig {
- applicationId 'com.xdownload.mobile.lite'
- minSdk 29
- targetSdk 34
- versionCode 2
- versionName '1.1-lite'
- ndk { abiFilters 'arm64-v8a' }
+  applicationId 'com.xdownload.pro'
+  minSdk 29
+  targetSdk 34
+  versionCode 1
+  versionName '1.0-rc1'
+  testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
  }
  compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
- packaging { jniLibs { useLegacyPackaging = true; pickFirsts += ['**/libc++_shared.so'] } }
+ if (System.getenv('XDOWNLOAD_KEYSTORE')) {
+  signingConfigs { persistent { storeFile file(System.getenv('XDOWNLOAD_KEYSTORE')); storePassword System.getenv('XDOWNLOAD_STORE_PASSWORD'); keyAlias System.getenv('XDOWNLOAD_KEY_ALIAS'); keyPassword System.getenv('XDOWNLOAD_KEY_PASSWORD') } }
+  buildTypes { release { signingConfig signingConfigs.persistent } }
+ }
 }
 dependencies {
- implementation 'io.github.junkfood02.youtubedl-android:library:0.18.1'
- implementation 'io.github.junkfood02.youtubedl-android:ffmpeg:0.18.1'
+ testImplementation 'junit:junit:4.13.2'
+ androidTestImplementation 'androidx.test:runner:1.6.2'
+ androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+ androidTestImplementation 'androidx.test:core:1.6.1'
 }

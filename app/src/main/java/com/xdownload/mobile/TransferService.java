@@ -1,0 +1,43 @@
+package com.xdownload.mobile;
+import android.app.*;
+import android.content.*;
+import android.net.*;
+import android.os.*;
+import android.provider.MediaStore;
+import java.io.*;
+import java.util.concurrent.*;
+import android.content.pm.ServiceInfo;
+
+public final class TransferService extends Service {
+ static final String CHANNEL="xdownload.transfers.v1";static final int NOTICE=9001;
+ private final ExecutorService worker=Executors.newSingleThreadExecutor();private final Handler main=new Handler(Looper.getMainLooper());
+ private volatile boolean dead=false,working=false;private Store store;private volatile Store.Job active;private PowerManager.WakeLock lock;
+ static void command(Context c,String action,String id){Intent i=new Intent(c,TransferService.class).setAction(action).putExtra("id",id);if(Build.VERSION.SDK_INT>=26)c.startForegroundService(i);else c.startService(i);}
+ @Override public void onCreate(){super.onCreate();store=Store.get(this);NotificationChannel ch=new NotificationChannel(CHANNEL,"Downloads",NotificationManager.IMPORTANCE_LOW);ch.setDescription("Download progress and controls");ch.setShowBadge(false);getSystemService(NotificationManager.class).createNotificationChannel(ch);}
+ @Override public IBinder onBind(Intent i){return null;}
+ @Override public int onStartCommand(Intent i,int flags,int id){if(i==null){stopSelf();return START_NOT_STICKY;}startForeground(NOTICE,notice(active),ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);String action=i.getAction();Store.Job job=store.getJob(i.getStringExtra("id"));if(job!=null){synchronized(store){if("pause".equals(action)&&("running".equals(job.state)||"queued".equals(job.state)))job.state="paused";else if("resume".equals(action)&&("paused".equals(job.state)||"error".equals(job.state)))job.state="queued";else if("cancel".equals(action)&&!job.state.equals("complete")&&!job.state.equals("saving")){job.state="cancelled";if(active!=job)part(job).delete();}store.save();}}
+  if(!working){working=true;worker.execute(this::drain);}return START_NOT_STICKY;}
+ private File part(Store.Job j){return new File(getFilesDir(),j.id+".part");}
+ private boolean allowed(){android.content.SharedPreferences s=Store.settings(this);ConnectivityManager cm=getSystemService(ConnectivityManager.class);NetworkCapabilities cap=cm.getNetworkCapabilities(cm.getActiveNetwork());if(cap==null||!cap.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET))return false;if(s.getBoolean("wifi",false)&&!cap.hasTransport(NetworkCapabilities.TRANSPORT_WIFI))return false;if(s.getBoolean("battery",false)&&getSystemService(PowerManager.class).isPowerSaveMode())return false;return true;}
+ private boolean proceed(Store.Job j){synchronized(store){return !dead&&"running".equals(j.state)&&allowed();}}
+ private void drain(){try{PowerManager pm=getSystemService(PowerManager.class);lock=pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"XDownload:Transfer");lock.acquire(60*60*1000L);Store.Job j;while(!dead&&(j=store.next())!=null){active=j;runJob(j);active=null;}}finally{if(lock!=null&&lock.isHeld())lock.release();main.post(()->{working=false;if(dead)return;boolean queued=false;for(Store.Job j:store.list())if(j.state.equals("queued"))queued=true;if(queued){working=true;worker.execute(this::drain);}else{stopForeground(STOP_FOREGROUND_REMOVE);stopSelf();}});}}
+ private void runJob(Store.Job j){File file=part(j);long lastTime=SystemClock.elapsedRealtime();final long[] speedData={lastTime,file.length()};try{
+   if(!allowed()){synchronized(store){j.state="paused";j.error="Waiting for permitted network or battery mode";store.save();}return;}
+   if(j.total>0&&j.total-file.length()>getFilesDir().getUsableSpace())throw new IOException("Not enough storage");
+   int mode=Store.settings(this).getInt("mode",1);long rate=mode==0?512*1024L:mode==3?1024*1024L:0;
+   long result=-1;IOException error=null;for(int attempt=0;attempt<3&&proceed(j);attempt++){try{result=HttpEngine.download(j.url,Store.settings(this).getBoolean("http",false),file,j.etag,j.modified,new HttpEngine.Observer(){public boolean proceed(){return TransferService.this.proceed(j);}public void progress(long done,long total,String etag,String modified)throws IOException{long now=SystemClock.elapsedRealtime();synchronized(store){j.done=done;j.total=total;j.etag=etag;j.modified=modified;long elapsed=now-speedData[0];if(elapsed>700){j.speed=Math.max(0,(done-speedData[1])*1000/elapsed);speedData[0]=now;speedData[1]=done;store.save();refresh(j);}}if(getFilesDir().getUsableSpace()<4*1024*1024L)throw new IOException("Storage full");}},rate);error=null;break;}catch(IOException e){error=e;if(attempt<2&&proceed(j))Thread.sleep(1000L*(attempt+1));}}
+   if(error!=null)throw error;
+   synchronized(store){if(result<0||!j.state.equals("running")||dead){if(j.state.equals("running")){j.state="paused";j.error="Paused by network or battery policy";}if(j.state.equals("cancelled"))file.delete();j.speed=0;store.save();return;}j.state="saving";store.save();}
+   j.sha=HttpEngine.sha256(file);if(!j.expected.isEmpty()&&!j.sha.equalsIgnoreCase(j.expected))throw new IOException("SHA-256 mismatch; file not published");
+   if(file.length()+4*1024*1024L>getFilesDir().getUsableSpace())throw new IOException("Need additional storage to publish completed file");
+   ContentValues values=new ContentValues();values.put(MediaStore.MediaColumns.DISPLAY_NAME,j.name);values.put(MediaStore.MediaColumns.MIME_TYPE,j.mime);values.put(MediaStore.MediaColumns.RELATIVE_PATH,Environment.DIRECTORY_DOWNLOADS+"/XDownloadPro/"+HttpEngine.category(j.name,j.mime));values.put(MediaStore.MediaColumns.IS_PENDING,1);Uri uri=getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI,values);if(uri==null)throw new IOException("Cannot create output file");
+   try{try(InputStream in=new FileInputStream(file);OutputStream out=getContentResolver().openOutputStream(uri,"w")){if(out==null)throw new IOException("Cannot write output");byte[] buf=new byte[65536];int n;while((n=in.read(buf))!=-1)out.write(buf,0,n);}ContentValues done=new ContentValues();done.put(MediaStore.MediaColumns.IS_PENDING,0);if(getContentResolver().update(uri,done,null,null)!=1)throw new IOException("Cannot publish output");}catch(Exception e){getContentResolver().delete(uri,null,null);throw e;}
+   synchronized(store){j.uri=uri.toString();j.done=result;j.total=result;j.state="complete";j.error="";j.speed=0;store.save();}file.delete();completed(j);
+  }catch(Exception e){synchronized(store){if(j.state.equals("cancelled"))file.delete();else if(!j.state.equals("paused")){j.state="error";j.error=e.getMessage()==null?"Transfer failed":e.getMessage();}j.speed=0;store.save();}}}
+ private PendingIntent action(String a,String id,int code){return PendingIntent.getService(this,code,new Intent(this,TransferService.class).setAction(a).putExtra("id",id),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);}
+ private PendingIntent open(){return PendingIntent.getActivity(this,9002,new Intent(this,MainActivity.class).putExtra("downloads",true).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);}
+ private Notification notice(Store.Job j){Notification.Builder b=new Notification.Builder(this,CHANNEL).setSmallIcon(android.R.drawable.stat_sys_download).setContentTitle(j==null?"X Download Pro":j.name).setContentIntent(open()).setOnlyAlertOnce(true).setOngoing(true).setCategory(Notification.CATEGORY_PROGRESS);if(j!=null){b.setContentText(MainActivity.size(j.done)+" / "+(j.total<0?"Unknown":MainActivity.size(j.total))+" · "+MainActivity.size(j.speed)+"/s");b.setProgress(1000,j.total>0?(int)Math.min(1000,1000.0*j.done/j.total):0,j.total<0);b.addAction(new Notification.Action.Builder(android.R.drawable.ic_media_pause,"Pause",action("pause",j.id,9003)).build());b.addAction(new Notification.Action.Builder(android.R.drawable.ic_menu_close_clear_cancel,"Cancel",action("cancel",j.id,9004)).build());}return b.build();}
+ private void refresh(Store.Job j){getSystemService(NotificationManager.class).notify(NOTICE,notice(j));}
+ private void completed(Store.Job j){getSystemService(NotificationManager.class).notify(j.id.hashCode(),new Notification.Builder(this,CHANNEL).setSmallIcon(android.R.drawable.stat_sys_download_done).setContentTitle(j.name).setContentText("Download complete · "+MainActivity.size(j.done)).setContentIntent(open()).setAutoCancel(true).build());}
+ @Override public void onDestroy(){dead=true;worker.shutdownNow();if(lock!=null&&lock.isHeld())lock.release();super.onDestroy();}
+}
