@@ -31,6 +31,7 @@ final class ProPrefs {
  static boolean hiddenPath(String name,String path){if(name.startsWith("."))return true;for(String part:path.split("/"))if(part.startsWith(".")&&!part.equals(".")&&!part.equals(".."))return true;return false;}
  static boolean allowedExtension(Context c,String name){ArrayList<String> a=list(c,"scan_extensions");return !get(c).contains("scan_extensions")||a.contains(TreeScanner.extension(name));}
  static int decoder(Context c,String name,boolean network){String ext=TreeScanner.extension(name);return number(c,"decoder_ext_"+ext,number(c,network?"decoder_network":"decoder_local",0));}
+ static int repeat(Context c){return Math.max(0,Math.min(2,number(c,"repeat_mode",0)));}
  static String[] speeds={"0.25×","0.5×","0.75×","1×","1.25×","1.5×","2×","3×","4×"};
  static float[] rates={.25f,.5f,.75f,1f,1.25f,1.5f,2f,3f,4f};
 }

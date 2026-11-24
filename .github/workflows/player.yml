@@ -1,4 +1,4 @@
-name: Build and test X Player Pro 3.2 settings RC1
+name: Build and test X Player Pro 3.3 media controls RC1
 on:
   push:
     branches: [x-player-pro]
@@ -106,8 +106,8 @@ jobs:
           adb shell am instrument -w -r com.xplayer.pro.test/androidx.test.runner.AndroidJUnitRunner | tee evidence/instrumentation.txt
           adb logcat -d -s XPlayerTest:I AndroidRuntime:E > evidence/playback-log.txt
           cat evidence/playback-log.txt
-          for image in library view-sort settings about player player-tools player-landscape; do adb exec-out run-as com.xplayer.pro cat files/ui-evidence/$image.png > evidence/$image.png; done
-          grep -E 'OK \(23 tests\)' evidence/instrumentation.txt
+          for image in library view-sort settings about player player-tools player-landscape media-notification; do adb exec-out run-as com.xplayer.pro cat files/ui-evidence/$image.png > evidence/$image.png; done
+          grep -E 'OK \(25 tests\)' evidence/instrumentation.txt
           if grep -E 'FAILURES!!!|INSTRUMENTATION_FAILED|Process crashed' evidence/instrumentation.txt; then exit 1; fi
           EOF
       - uses: reactivecircus/android-emulator-runner@v2
@@ -135,7 +135,7 @@ jobs:
           path: candidate
       - uses: actions/upload-artifact@v4
         with:
-          name: XPlayer-Pro-3.2-RC1-EMULATOR-TESTED
+          name: XPlayer-Pro-3.3-RC1-EMULATOR-TESTED
           path: candidate/XPlayer-Pro.apk
           if-no-files-found: error
 
@@ -145,6 +145,6 @@ jobs:
           path: phone
       - uses: actions/upload-artifact@v4
         with:
-          name: XPlayer-Pro-3.2-RC1-ARM64-DEVICE-TEST-REQUIRED
+          name: XPlayer-Pro-3.3-RC1-ARM64-DEVICE-TEST-REQUIRED
           path: phone/XPlayer-Pro-ARM64.apk
           if-no-files-found: error
