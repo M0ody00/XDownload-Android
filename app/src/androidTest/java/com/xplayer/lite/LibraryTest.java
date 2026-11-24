@@ -13,6 +13,7 @@ import java.io.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 @RunWith(AndroidJUnit4.class)
 public class LibraryTest {
+ @Test public void sizesKeepNumbersAndUnitsTogether(){assertEquals("340 MB",LibraryActivity.sizeText(340000000));assertEquals("3.5 GB",LibraryActivity.sizeText(3500000000L));assertEquals("1.8 MB",LibraryActivity.sizeText(1800000));assertEquals("13 GB",LibraryActivity.sizeText(13000000000L));assertEquals("0 B",LibraryActivity.sizeText(0));}
  @Test public void discoversFoldersAndMediaAutomatically() throws Exception {
   if(Build.VERSION.SDK_INT<29)return;
   Context app=InstrumentationRegistry.getInstrumentation().getTargetContext();

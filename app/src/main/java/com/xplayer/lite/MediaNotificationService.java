@@ -5,7 +5,7 @@ import android.os.*;
 /** Keep the visible player's platform media session associated with a real foreground
  * media-playback service, including on Android 11 OEM system media panels. */
 public final class MediaNotificationService extends Service {
- static boolean foreground=false;
+ static volatile boolean foreground=false;
  @Override public IBinder onBind(Intent intent){return null;}
  @Override public int onStartCommand(Intent intent,int flags,int id){
    NowPlaying owner=NowPlaying.current();
