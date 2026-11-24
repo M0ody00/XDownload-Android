@@ -87,7 +87,7 @@ jobs:
             adb install -g candidate/XDownload-Pro.apk
             adb install -g candidate/test.apk
             adb shell am instrument -w com.xdownload.pro.media.test/androidx.test.runner.AndroidJUnitRunner | tee result.txt
-            grep -F 'OK (3 tests)' result.txt
+            grep -F 'OK (5 tests)' result.txt
   verified:
     needs: [build, emulator]
     runs-on: ubuntu-latest
