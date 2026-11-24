@@ -10,6 +10,7 @@
    <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
    <intent-filter><action android:name="android.intent.action.SEND"/><category android:name="android.intent.category.DEFAULT"/><data android:mimeType="text/plain"/></intent-filter>
   </activity>
+  <activity android:name=".PrivateBrowserActivity" android:process=":privatebrowser" android:exported="false"/>
   <activity android:name=".ToolsActivity" android:exported="false"/>
   <activity android:name=".ExportActivity" android:exported="false"/>
   <service android:name=".TransferService" android:exported="false" android:foregroundServiceType="dataSync"/>
