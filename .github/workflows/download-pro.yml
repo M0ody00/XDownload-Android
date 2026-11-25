@@ -105,7 +105,7 @@ jobs:
             adb install -g candidate/XDownload-Pro.apk
             adb install -g candidate/test.apk
             adb shell am instrument -w com.xdownload.pro.next.test/androidx.test.runner.AndroidJUnitRunner | tee result.txt
-            grep -F 'OK (15 tests)' result.txt
+            grep -F 'OK (16 tests)' result.txt
   verified:
     needs: [build, emulator]
     runs-on: ubuntu-latest
