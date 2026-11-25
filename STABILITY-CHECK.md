@@ -1,0 +1,4 @@
+# Isolated RC5 stability verification
+Baseline d05803e4acca36735df1d2de7a05682b663a77f0, exact tree 47d31b0819ff595228deb8ff17bfbfe8b146b628, verified 45594404875. No dependency, R8, signing, app version or ABI changes. Stable branch remains untouched.
+Changes: reject contradictory Content-Length on resumed HTTP before opening the partial; check incoming length before writing; legacy range workers reject nonidentity encoding and HTML. Added deterministic loopback regression for conflicting length preserving existing bytes.
+Promotion requires same-commit successful JVM, build and all 24 emulator tests on APIs 29/30/35; no merge until verified. Physical OPPO/Huawei, real authorized source failures, signing, full audit and performance validation still open. No new product feature or universal download claim.
