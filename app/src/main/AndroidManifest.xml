@@ -28,6 +28,7 @@
   <activity android:name=".AudioStudioActivity" android:exported="false"/>
   <activity android:name=".ExportActivity" android:exported="false"/>
   <receiver android:name=".DownloadWidget" android:exported="false" android:label="X Download Pro"><intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter><meta-data android:name="android.appwidget.provider" android:resource="@xml/download_widget"/></receiver>
+  <receiver android:name=".RecoveryReceiver" android:exported="false"><intent-filter><action android:name="android.intent.action.BOOT_COMPLETED"/></intent-filter></receiver>
   <service android:name=".ScheduleService" android:permission="android.permission.BIND_JOB_SERVICE" android:exported="true"/>
   <service android:name=".BackgroundAudioService" android:exported="false" android:foregroundServiceType="mediaPlayback"/>
   <service android:name=".QuickOverlayService" android:exported="false" android:foregroundServiceType="specialUse"><property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="User-enabled visible floating download shortcut with explicit stop control; no background clipboard monitoring"/></service>

@@ -1,0 +1,1 @@
+package com.xdownload.mobile;import org.junit.Test;import static org.junit.Assert.*;public class LinkPolicyTest{@Test public void knownFileSuffixesOnly(){assertTrue(LinkPolicy.fileLike("movie.MP4"));assertTrue(LinkPolicy.fileLike("report.pdf"));assertFalse(LinkPolicy.fileLike("page.html"));assertFalse(LinkPolicy.fileLike("file.pdf.exe"));assertFalse(LinkPolicy.fileLike(null));}}

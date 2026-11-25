@@ -51,3 +51,5 @@ X8 dynamic range candidate requires exact-byte, pause/resume, split partition an
 RC4 X8 interface and browser integration candidates: optional one-click within built-in browser, external MIME-aware chooser, mode/appearance backup and main RTL. Verify physical external browser behavior, layout at 125% text, and one-click duplicate/permission behavior. FTP/FTPS/SFTP/QUIC, optional independently installed engines, full localization and signed release remain open.
 
 RC4 adds real concurrent slow-tail test and byte-coverage UI; verify actual Android rendering and device throughput/energy before any X8 claim.
+
+RC4 boot recovery reminder and visible filtered link grabber candidates added. Require 23 instrumented tests each API29/30/35 plus physical boot/permission test; no silent restart of manually paused downloads.

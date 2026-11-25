@@ -1,0 +1,2 @@
+package com.xdownload.mobile;
+final class LinkPolicy{static boolean fileLike(String name){return name!=null&&name.length()<=512&&name.toLowerCase(java.util.Locale.ROOT).matches(".*\\.(mp4|mkv|webm|mov|mp3|m4a|aac|flac|wav|ogg|opus|zip|rar|7z|pdf|docx?|xlsx?|pptx?|txt|apk|jpg|jpeg|png|webp|gif|iso|gz|tar)$");}}

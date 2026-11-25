@@ -124,4 +124,6 @@ import android.content.*;import android.net.Uri;import androidx.test.core.app.Ac
   Intent rejected=new Intent(c,QuickDownloadActivity.class).setAction(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT,"https://user:secret@example.invalid/");
   try(ActivityScenario<QuickDownloadActivity> scenario=ActivityScenario.launch(rejected)){scenario.onActivity(a->{assertEquals("",a.url.getText().toString());assertEquals(count,Store.get(c).list().size());});}
  }
+
+ @Test public void recoveryMarksInterruptedButNotManualPause()throws Exception{Store.Job job=new Store.Job("https://example.invalid/test",new HttpEngine.Info("test","application/octet-stream",20,"","",false),"");job.state="running";Store.Job interrupted=new Store.Job(job.json());assertEquals("paused",interrupted.state);assertTrue(interrupted.recoverable());job.state="paused";job.recoveryPending=false;assertFalse(new Store.Job(job.json()).recoverable());job.state="complete";job.recoveryPending=true;assertFalse(new Store.Job(job.json()).recoverable());job.state="scheduled";assertFalse(new Store.Job(job.json()).recoverable());}
 }
