@@ -63,3 +63,5 @@ RC5 requires 24 device instrumentation tests per API 29/30/35, including caption
 See RC5-AUDIT.md for exact scope and open gates. Do not mark final until exact commit verified and physical device/authorized live-source/signing tests passed.
 
 4.0 stabilization: version name 4.0, no additional RC stages. Exact commit must pass 25 instrumentation tests per API29/30/35 and JVM/size/signature gates after R8/resource shrink. Physical device, signed owner release, real authorized source validation, and full security audit remain unverified. Native bundled functionality retained, optional native modules not implemented; no target size or crash-free percentage claimed.
+
+Build 45590523990 failed at minifyDebugWithR8 because Commons Compress 1.28.0 references optional com.github.luben.zstd.ZstdInputStream. Corrected by pinning its declared compatible version 1.5.7-4 as the Android AAR, not suppressing R8 missing-class warnings. Added actual native compression/decompression regression via Commons Compress; require 26 instrumentation tests per emulator and APK size gate. No new version number. Pending exact-commit verification.

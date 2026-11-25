@@ -25,6 +25,8 @@ dependencies {
  implementation 'io.github.junkfood02.youtubedl-android:aria2c:0.18.1'
  implementation 'androidx.media3:media3-transformer:1.5.1'
  implementation 'org.apache.commons:commons-compress:1.28.0'
+ // Android AAR (not desktop multi-platform JAR): optional Commons Compress Zstandard decoder.
+ implementation 'com.github.luben:zstd-jni:1.5.7-4@aar'
  implementation 'org.tukaani:xz:1.10'
  implementation 'com.github.junrar:junrar:8.1.2'
  implementation 'commons-net:commons-net:3.13.0'

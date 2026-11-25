@@ -130,4 +130,12 @@ import android.content.*;import android.net.Uri;import androidx.test.core.app.Ac
  @Test public void quickShareAcceptsCaptionAndRejectsMultipleLinks(){Context c=InstrumentationRegistry.getInstrumentation().getTargetContext();Intent share=new Intent(c,QuickDownloadActivity.class).setAction(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT,"Watch this https://example.invalid/video.mp4");try(ActivityScenario<QuickDownloadActivity> scenario=ActivityScenario.launch(share)){scenario.onActivity(a->assertEquals("https://example.invalid/video.mp4",a.url.getText().toString()));}}
 
  @Test public void completedStagingCheckpointRejectsCorruptionAndSurvivesReload()throws Exception{Context c=InstrumentationRegistry.getInstrumentation().getTargetContext();File f=File.createTempFile("stage-proof-",".part",c.getCacheDir());try{java.nio.file.Files.write(f.toPath(),new byte[]{1,2,3});Store.Job j=new Store.Job("https://example.invalid/f",new HttpEngine.Info("file","application/octet-stream",3,"","",false),"");j.state="saving";j.stagedLength=f.length();j.stagedHash=HttpEngine.sha256(f);Store.Job restored=new Store.Job(j.json());assertEquals("paused",restored.state);assertTrue(StagedFile.valid(f,restored.stagedLength,restored.stagedHash));java.nio.file.Files.write(f.toPath(),new byte[]{1,2,4});assertFalse(StagedFile.valid(f,restored.stagedLength,restored.stagedHash));j.state="complete";assertEquals(-1,new Store.Job(j.json()).stagedLength);}finally{f.delete();}}
+
+ @Test public void zstandardNativeRoundTripAfterShrinking()throws Exception{
+  byte[] original=new byte[8192];new java.util.Random(42).nextBytes(original);
+  byte[] compressed=com.github.luben.zstd.Zstd.compress(original);
+  try(InputStream in=new org.apache.commons.compress.compressors.zstandard.ZstdCompressorInputStream(new ByteArrayInputStream(compressed));ByteArrayOutputStream out=new ByteArrayOutputStream()){
+   byte[] b=new byte[1024];int n;while((n=in.read(b))!=-1)out.write(b,0,n);assertArrayEquals(original,out.toByteArray());
+  }
+ }
 }

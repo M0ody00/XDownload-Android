@@ -6,3 +6,6 @@
 -keepclasseswithmembernames class * { native <methods>; }
 -keepattributes Signature,InnerClasses,EnclosingMethod,*Annotation*
 -dontobfuscate
+
+# JNI entry points of the actual Android Zstandard runtime.
+-keep class com.github.luben.zstd.** { *; }
