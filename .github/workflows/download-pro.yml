@@ -54,6 +54,7 @@ jobs:
           unzip -tq phone/XDownload-Pro-ARM64.apk
           unzip -Z1 phone/XDownload-Pro-ARM64.apk | grep -Fx lib/arm64-v8a/libpython.so
           unzip -Z1 phone/XDownload-Pro-ARM64.apk | grep -Fx lib/arm64-v8a/libffmpeg.so
+          unzip -Z1 phone/XDownload-Pro-ARM64.apk | grep -Fx lib/arm64-v8a/libaria2c.so
       - uses: actions/upload-artifact@v4
         with:
           name: phone-candidate
@@ -89,7 +90,7 @@ jobs:
             adb install -g candidate/XDownload-Pro.apk
             adb install -g candidate/test.apk
             adb shell am instrument -w com.xdownload.pro.next.test/androidx.test.runner.AndroidJUnitRunner | tee result.txt
-            grep -F 'OK (10 tests)' result.txt
+            grep -F 'OK (11 tests)' result.txt
   verified:
     needs: [build, emulator]
     runs-on: ubuntu-latest
