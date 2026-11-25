@@ -35,3 +35,5 @@ RC1 adds MediaStore recycle/restore candidate and test gate (21 Android tests pe
 RC2 candidate extends background queue, basic ASS and gestures; physical lock-screen/PiP/gesture/codec compatibility and ASS styling remain to verify. No new decoder is claimed.
 
 RC2 adds estimated-size video conversion/batch and multi-file LAN ZIP share candidates. Actual target sizes, media compatibility, batch and LAN lifecycle require validation. Optional engine modules, widget and full localization remain open.
+
+RC2 mini-player and aggregate launcher widget candidates added; widget host rendering, background queue transitions and real video output sizes remain device verification tasks. Optional downloadable engine modules and full localization not completed.

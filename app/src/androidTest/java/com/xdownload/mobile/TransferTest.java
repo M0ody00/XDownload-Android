@@ -79,7 +79,7 @@ import android.content.*;import android.net.Uri;import androidx.test.core.app.Ac
    File raw=new File(dir,"frames.rgb"),video=new File(dir,"sample.mp4"),png=new File(dir,"frame.png"),gif=new File(dir,"clip.gif");
    try(OutputStream out=new FileOutputStream(raw)){byte[] frame=new byte[64*48*3];for(int n=0;n<20;n++){for(int k=0;k<frame.length;k+=3){frame[k]=(byte)(n*9);frame[k+1]=(byte)(k%255);frame[k+2]=(byte)127;}out.write(frame);}}
    ffmpeg("-y","-f","rawvideo","-pixel_format","rgb24","-video_size","64x48","-framerate","10","-i",raw.getPath(),"-c:v","mpeg4","-pix_fmt","yuv420p",video.getPath());
-   VideoImageActivity.encode(c,video,png,0.2,0,false);VideoImageActivity.encode(c,video,gif,0,1,true);assertTrue(png.length()>32);assertTrue(gif.length()>32);
+   VideoImageActivity.encode(c,video,png,0.2,0,false);VideoImageActivity.encode(c,video,gif,0,1,true);assertTrue(png.length()>32);assertTrue(gif.length()>32);File converted=new File(dir,"compressed.mp4");BatchVideoActivity.encode(c,video,converted,480,10);assertTrue(converted.length()>100);assertTrue(converted.length()<10L*1024*1024);
    prefs.edit().putInt("connections",16).putString("private_url","must-not-export").commit();
    org.json.JSONObject saved=SettingsBackupActivity.snapshot(prefs);assertFalse(saved.has("private_url"));
    File clear=new File(dir,"settings.json"),enc=new File(dir,"settings.xdvault"),decoded=new File(dir,"decoded.json");
