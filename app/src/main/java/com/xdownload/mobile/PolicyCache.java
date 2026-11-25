@@ -1,0 +1,2 @@
+package com.xdownload.mobile;import java.util.function.BooleanSupplier;
+final class PolicyCache{private long sampled=-1;private boolean value; synchronized boolean get(long now,BooleanSupplier read){if(sampled<0||now<sampled||now-sampled>=250){value=read.getAsBoolean();sampled=now;}return value;}synchronized void invalidate(){sampled=-1;}}

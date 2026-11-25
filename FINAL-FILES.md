@@ -1,0 +1,1 @@
+Isolated RC5 group: actual bounded SHA-256 duplicate scan, not saved hashes; no deletion, user initiated cancellation. Archive passwords/multipart and batch rename/move remain open. Require JVM/build and 24 instrumented tests per Android API 29/30/35 before merging.
