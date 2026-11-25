@@ -60,7 +60,7 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs candidate/XDownload-Pro.apk
       - name: Build ARM64 phone candidate
         run: |
-          gradle --no-daemon :app:assembleDebug -PphoneAbi=arm64-v8a
+          gradle --no-daemon --offline :app:assembleDebug -PphoneAbi=arm64-v8a
           mkdir -p phone
           cp app/build/outputs/apk/debug/app-debug.apk phone/XDownload-Pro-ARM64.apk
           BT="$ANDROID_HOME/build-tools/35.0.0"
@@ -101,7 +101,17 @@ jobs:
       matrix:
         api: [29, 30, 35]
     steps:
-      - uses: actions/download-artifact@v4
+      - name: Fetch tested build candidate
+        id: fetch_candidate
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: candidate
+          path: candidate
+      - if: steps.fetch_candidate.outcome == 'failure'
+        run: sleep 15
+      - if: steps.fetch_candidate.outcome == 'failure'
+        uses: actions/download-artifact@v4
         with:
           name: candidate
           path: candidate
@@ -125,7 +135,17 @@ jobs:
     needs: [build, emulator]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - name: Fetch tested build candidate
+        id: fetch_candidate
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: candidate
+          path: candidate
+      - if: steps.fetch_candidate.outcome == 'failure'
+        run: sleep 15
+      - if: steps.fetch_candidate.outcome == 'failure'
+        uses: actions/download-artifact@v4
         with:
           name: candidate
           path: candidate
@@ -133,7 +153,17 @@ jobs:
         with:
           name: XDownload-Pro-4.0-RC4-X8-TESTED
           path: candidate/XDownload-Pro.apk
-      - uses: actions/download-artifact@v4
+      - name: Fetch ARM64 candidate
+        id: fetch_phone
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: phone-candidate
+          path: phone
+      - if: steps.fetch_phone.outcome == 'failure'
+        run: sleep 15
+      - if: steps.fetch_phone.outcome == 'failure'
+        uses: actions/download-artifact@v4
         with:
           name: phone-candidate
           path: phone

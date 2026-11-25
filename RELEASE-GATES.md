@@ -53,3 +53,5 @@ RC4 X8 interface and browser integration candidates: optional one-click within b
 RC4 adds real concurrent slow-tail test and byte-coverage UI; verify actual Android rendering and device throughput/energy before any X8 claim.
 
 RC4 boot recovery reminder and visible filtered link grabber candidates added. Require 23 instrumented tests each API29/30/35 plus physical boot/permission test; no silent restart of manually paused downloads.
+
+RC4 FTP/FTPS candidate: anonymous public files only, plaintext opt-in, explicit TLS with trust/hostname/data peer checks. Requires actual FTPS positive/negative certificate tests and OEM testing; no SFTP or HTTP/3 claim. CI missing-artifact transient handled by bounded repeat, final failure remains fail-closed.

@@ -10,7 +10,7 @@ import java.util.concurrent.*;
 import org.json.*;
 /** Password-encrypted, whitelisted settings only; no browser history, URLs or vault keys. */
 public final class SettingsBackupActivity extends SecureActivity{
- static final String[] BOOL={"english","light","wifi","battery","http","js","block_trackers","data_saver","media_enabled","torrent_enabled","amoled","dynamic_ranges","one_click"};
+ static final String[] BOOL={"english","light","wifi","battery","http","js","block_trackers","data_saver","media_enabled","torrent_enabled","amoled","dynamic_ranges","one_click","ftp_enabled","recovery_notice"};
  static final String[] INT={"mode","rate_kib","global_http_kib","parallel_jobs","connections","search_engine","player_repeat","player_speed","eq_preset","bass_strength","accent","font_scale"};
  static final int[] MIN={0,0,0,1,1,0,0,50,-1,0,0,85},MAX={4,102400,102400,3,32,2,2,200,31,1000,5,125},DEF={1,0,0,2,8,0,0,100,-1,0,0,100};
  static final int MAX_JSON=16384;
