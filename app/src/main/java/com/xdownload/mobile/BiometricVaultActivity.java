@@ -2,7 +2,7 @@ package com.xdownload.mobile;
 import android.app.*;import android.content.*;import android.hardware.biometrics.BiometricManager;import android.hardware.biometrics.BiometricPrompt;import android.os.*;import android.net.Uri;import android.provider.OpenableColumns;import android.security.keystore.*;import android.view.WindowManager;import android.widget.*;
 import java.io.*;import java.security.*;import javax.crypto.*;import javax.crypto.spec.GCMParameterSpec;import java.util.*;import java.util.concurrent.*;
 /** Device-bound encrypted copies. Strong biometric required for every import/export. No plaintext in app cache. */
-public final class BiometricVaultActivity extends Activity {
+public final class BiometricVaultActivity extends SecureActivity {
  static final String ALIAS="xdownload.biometric.v1";static final long MAX=16L*1024*1024;
  final ExecutorService io=Executors.newSingleThreadExecutor();volatile boolean dead=false;boolean busy=false,en;TextView status;LinearLayout rows;Button add;File selected;CancellationSignal signal;
  String tr(String a,String b){return en?b:a;}

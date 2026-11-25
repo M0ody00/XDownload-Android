@@ -9,7 +9,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import org.json.*;
 /** Password-encrypted, whitelisted settings only; no browser history, URLs or vault keys. */
-public final class SettingsBackupActivity extends Activity{
+public final class SettingsBackupActivity extends SecureActivity{
  static final String[] BOOL={"english","light","wifi","battery","http","js","block_trackers","data_saver"};
  static final String[] INT={"mode","rate_kib","global_http_kib","parallel_jobs","connections","search_engine","player_repeat","player_speed","eq_preset","bass_strength"};
  static final int[] MIN={0,0,0,1,1,0,0,50,-1,0},MAX={3,102400,102400,3,32,2,2,200,31,1000},DEF={1,0,0,2,8,0,0,100,-1,0};

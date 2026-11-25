@@ -7,7 +7,7 @@ import android.widget.*;
 import java.io.*;
 import java.util.concurrent.*;
 /** Explicit local file input, bounded GIF/frame exports, no network output. */
-public final class VideoImageActivity extends Activity {
+public final class VideoImageActivity extends SecureActivity {
  final ExecutorService io=Executors.newSingleThreadExecutor();
  volatile boolean dead=false;boolean busy=false,en;
  Uri source;File result;String suffix="png";

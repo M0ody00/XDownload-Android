@@ -8,7 +8,7 @@ import androidx.media3.common.MediaItem;
 import androidx.media3.transformer.*;
 import java.io.*;
 import java.util.concurrent.*;
-public class ExportActivity extends Activity {
+public class ExportActivity extends SecureActivity {
  private Transformer transformer;private Uri source;private File temp;private TextView status;private Button trim,extract,save;private boolean busy=false,ready=false;private boolean copying=false;private volatile boolean dead=false;private boolean audio=false,mp3=false;private Button mp3Button,full,compress,merge,mergeAudio,trimAudio;private boolean clipAudio=false;private boolean mergeSound=false;private boolean fullVideo=false,resize=false;
  private final ExecutorService io=Executors.newSingleThreadExecutor();
  private EditText start,end;
