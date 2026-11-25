@@ -19,3 +19,5 @@ Preview 3 follow-up: favorites and conservative separate-download renewal are im
 Candidate follow-up implements direct HTTP aggregate pacing and platform audio effects; strict native torrent/media bandwidth cap and actual effect/throughput validation remain open.
 
 Preview 4 includes sequential local batch audio conversion to ZIP; batch video and actual multi-file device tests remain pending.
+
+Preview 4 follow-up adds encrypted settings backup only (not file/history backup), actual video-image and backup regression gate. Final release still blocked until tests, real ARM64 device and durable signing verification, plus remaining scope.

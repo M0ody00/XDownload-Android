@@ -19,6 +19,7 @@
   <activity android:name=".BiometricVaultActivity" android:exported="false"/>
   <activity android:name=".VideoImageActivity" android:exported="false"/>
   <activity android:name=".LocalPlayerActivity" android:exported="false" android:supportsPictureInPicture="true" android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"/>
+  <activity android:name=".SettingsBackupActivity" android:exported="false"/>
   <activity android:name=".ToolsActivity" android:exported="false"/>
   <activity android:name=".AudioStudioActivity" android:exported="false"/>
   <activity android:name=".ExportActivity" android:exported="false"/>

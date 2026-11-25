@@ -71,4 +71,21 @@ import android.content.*;import android.net.Uri;import androidx.test.core.app.Ac
   finally{if(id!=null)OfflinePages.delete(c,id);}
   try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)){scenario.onActivity(a->{a.show(4);MainActivity.filterSettings(a.body,"JavaScript");int visible=0;for(int i=2;i<a.body.getChildCount();i++)if(a.body.getChildAt(i).getVisibility()==android.view.View.VISIBLE)visible++;assertEquals(1,visible);MainActivity.filterSettings(a.body,"");for(int i=2;i<a.body.getChildCount();i++)assertEquals(android.view.View.VISIBLE,a.body.getChildAt(i).getVisibility());});}
  }
+
+ @Test public void actualVideoImagesAndEncryptedSettings()throws Exception{
+  Context c=InstrumentationRegistry.getInstrumentation().getTargetContext();File dir=new File(c.getCacheDir(),"angel-test-"+java.util.UUID.randomUUID());assertTrue(dir.mkdir());
+  SharedPreferences prefs=c.getSharedPreferences("angel-backup-test",0);
+  try{
+   File raw=new File(dir,"frames.rgb"),video=new File(dir,"sample.mp4"),png=new File(dir,"frame.png"),gif=new File(dir,"clip.gif");
+   try(OutputStream out=new FileOutputStream(raw)){byte[] frame=new byte[64*48*3];for(int n=0;n<20;n++){for(int k=0;k<frame.length;k+=3){frame[k]=(byte)(n*9);frame[k+1]=(byte)(k%255);frame[k+2]=(byte)127;}out.write(frame);}}
+   ffmpeg("-y","-f","rawvideo","-pixel_format","rgb24","-video_size","64x48","-framerate","10","-i",raw.getPath(),"-c:v","mpeg4","-pix_fmt","yuv420p",video.getPath());
+   VideoImageActivity.encode(c,video,png,0.2,0,false);VideoImageActivity.encode(c,video,gif,0,1,true);assertTrue(png.length()>32);assertTrue(gif.length()>32);
+   prefs.edit().putInt("connections",16).putString("private_url","must-not-export").commit();
+   org.json.JSONObject saved=SettingsBackupActivity.snapshot(prefs);assertFalse(saved.has("private_url"));
+   File clear=new File(dir,"settings.json"),enc=new File(dir,"settings.xdvault"),decoded=new File(dir,"decoded.json");
+   java.nio.file.Files.write(clear.toPath(),saved.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+   FileTools.crypt(clear,enc,"test-password".toCharArray(),true);FileTools.crypt(enc,decoded,"test-password".toCharArray(),false);
+   prefs.edit().clear().commit();SettingsBackupActivity.apply(prefs,new org.json.JSONObject(new String(java.nio.file.Files.readAllBytes(decoded.toPath()),java.nio.charset.StandardCharsets.UTF_8)));assertEquals(16,prefs.getInt("connections",0));assertFalse(prefs.contains("private_url"));
+  }finally{prefs.edit().clear().commit();FileTools.deleteTree(dir);}
+ }
 }
