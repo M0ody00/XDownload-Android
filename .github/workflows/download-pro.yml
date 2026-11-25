@@ -131,7 +131,7 @@ jobs:
           path: candidate
       - uses: actions/upload-artifact@v4
         with:
-          name: XDownload-Pro-4.0-RC3-TESTED
+          name: XDownload-Pro-4.0-RC4-X8-TESTED
           path: candidate/XDownload-Pro.apk
       - uses: actions/download-artifact@v4
         with:
@@ -139,5 +139,5 @@ jobs:
           path: phone
       - uses: actions/upload-artifact@v4
         with:
-          name: XDownload-Pro-4.0-RC3-ARM64-DEVICE-TEST-REQUIRED
+          name: XDownload-Pro-4.0-RC4-X8-ARM64-DEVICE-TEST-REQUIRED
           path: phone/

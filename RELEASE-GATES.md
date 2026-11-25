@@ -47,3 +47,5 @@ RC3 introduces consent-based floating shortcut and foreground clipboard suggesti
 RC3 UI regression added: valid shared URL displays without auto-starting download; credential-bearing URL rejected. 22-test gate on API29/30/35. No claim of universal auto-popup or physical phone compatibility yet.
 
 X8 dynamic range candidate requires exact-byte, pause/resume, split partition and invalid-range JVM regressions plus physical throughput/energy tests. 8x is a conditional target, not a measured result.
+
+RC4 X8 interface and browser integration candidates: optional one-click within built-in browser, external MIME-aware chooser, mode/appearance backup and main RTL. Verify physical external browser behavior, layout at 125% text, and one-click duplicate/permission behavior. FTP/FTPS/SFTP/QUIC, optional independently installed engines, full localization and signed release remain open.
