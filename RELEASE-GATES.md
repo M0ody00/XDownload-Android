@@ -57,3 +57,5 @@ RC4 boot recovery reminder and visible filtered link grabber candidates added. R
 RC4 FTP/FTPS candidate: anonymous public files only, plaintext opt-in, explicit TLS with trust/hostname/data peer checks. Requires actual FTPS positive/negative certificate tests and OEM testing; no SFTP or HTTP/3 claim. CI missing-artifact transient handled by bounded repeat, final failure remains fail-closed.
 
 RC5 visual and clipboard UX changes require device testing: compact home, player tools, cinema/double-tap, PiP, Arabic layouts, old overlay stopped, tile/share, foreground clipboard expiry. No claim of global clipboard monitoring.
+
+RC5 requires 24 device instrumentation tests per API 29/30/35, including caption sharing. Verify authorized real media URLs including audio-only and engine version/device runtime, no background clipboard monitoring; actual user failure link not supplied. Full codebase audit and signed production deployment not complete.
