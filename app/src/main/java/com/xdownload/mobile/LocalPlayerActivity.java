@@ -15,7 +15,7 @@ public final class LocalPlayerActivity extends Activity {
     final Handler handler=new Handler(Looper.getMainLooper());
     VideoView video;
     SeekBar seek;
-    TextView title, status, time, position;
+    TextView title, status, time, position, subtitle;LinearLayout playerRoot;FrameLayout mediaScreen;Button pipButton,subtitleButton;boolean pipRequested=false;java.util.List<SrtTrack.Cue> cues=Collections.emptyList();String cueJob="";
     Button play, repeat, speedButton, timerButton, backgroundButton;
     MediaPlayer preparedPlayer;float playbackSpeed=1f;long sleepDeadline=0;
     AudioManager audio;
@@ -69,15 +69,15 @@ public final class LocalPlayerActivity extends Activity {
             .build();
 
         getWindow().setStatusBarColor(bg);getWindow().setNavigationBarColor(bg);
-        LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(bg);root.setPadding(dp(10),dp(6),dp(10),dp(8));
+        LinearLayout root=new LinearLayout(this);playerRoot=root;root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(bg);root.setPadding(dp(10),dp(6),dp(10),dp(8));
         LinearLayout header=new LinearLayout(this);header.setGravity(Gravity.CENTER_VERTICAL);
         Button back=button(tr("رجوع","Back"),this::finish);header.addView(back,new LinearLayout.LayoutParams(dp(82),dp(46)));
         TextView brand=text("X DOWNLOAD • PLAYER",16,accent);header.addView(brand,new LinearLayout.LayoutParams(0,dp(46),1));root.addView(header);
         title=text("",17,fg);title.setMaxLines(2);root.addView(title,new LinearLayout.LayoutParams(-1,-2));
         position=text("",12,accent);root.addView(position);
-        FrameLayout screen=new FrameLayout(this);screen.setBackgroundColor(android.graphics.Color.BLACK);
+        FrameLayout screen=new FrameLayout(this);mediaScreen=screen;screen.setBackgroundColor(android.graphics.Color.BLACK);
         video=new VideoView(this);video.setAudioFocusRequest(0);
-        screen.addView(video,new FrameLayout.LayoutParams(-1,-1,Gravity.CENTER));root.addView(screen,new LinearLayout.LayoutParams(-1,0,1));
+        screen.addView(video,new FrameLayout.LayoutParams(-1,-1,Gravity.CENTER));subtitle=text("",15,android.graphics.Color.WHITE);subtitle.setBackgroundColor(0xaa000000);subtitle.setPadding(dp(8),dp(4),dp(8),dp(4));subtitle.setVisibility(View.GONE);FrameLayout.LayoutParams sub=new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM);sub.bottomMargin=dp(12);screen.addView(subtitle,sub);root.addView(screen,new LinearLayout.LayoutParams(-1,0,1));
         status=text("",13,fg);root.addView(status,new LinearLayout.LayoutParams(-1,-2));
         seek=new SeekBar(this);seek.setMax(1);seek.setEnabled(false);root.addView(seek,new LinearLayout.LayoutParams(-1,dp(40)));
         time=text("00:00 / 00:00",12,fg);root.addView(time);
@@ -85,7 +85,7 @@ public final class LocalPlayerActivity extends Activity {
         play=button(tr("تشغيل","Play"),()->{if(wantPlay||(ready&&video.isPlaying()))pausePlayback();else startPlayback();});item(controls,play);
         item(controls,button(tr("التالي","Next"),()->move(1)));root.addView(controls);
         LinearLayout extras=new LinearLayout(this);repeat=button(repeatLabel(),this::chooseRepeat);item(extras,repeat);
-        item(extras,button(tr("قائمة التشغيل","Playlist"),this::chooseTrack));root.addView(extras);LinearLayout more=new LinearLayout(this);speedButton=button(speedLabel(),this::chooseSpeed);item(more,speedButton);timerButton=button(tr("مؤقت النوم","Sleep timer"),this::chooseSleep);item(more,timerButton);root.addView(more);backgroundButton=button(tr("تشغيل الصوت في الخلفية","Play audio in background"),this::handoffAudio);root.addView(backgroundButton,new LinearLayout.LayoutParams(-1,dp(48)));setContentView(root);
+        item(extras,button(tr("قائمة التشغيل","Playlist"),this::chooseTrack));root.addView(extras);LinearLayout more=new LinearLayout(this);speedButton=button(speedLabel(),this::chooseSpeed);item(more,speedButton);timerButton=button(tr("مؤقت النوم","Sleep timer"),this::chooseSleep);item(more,timerButton);root.addView(more);backgroundButton=button(tr("تشغيل الصوت في الخلفية","Play audio in background"),this::handoffAudio);root.addView(backgroundButton,new LinearLayout.LayoutParams(-1,dp(48)));LinearLayout options=new LinearLayout(this);pipButton=button(tr("نافذة عائمة","Picture-in-picture"),this::enterPip);item(options,pipButton);subtitleButton=button(tr("ترجمة SRT","SRT subtitles"),this::chooseSubtitle);item(options,subtitleButton);root.addView(options);setContentView(root);
 
         seek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
             public void onStartTrackingTouch(SeekBar b){dragging=true;}
@@ -106,7 +106,7 @@ public final class LocalPlayerActivity extends Activity {
     void load(int offset,boolean autoplay){
         if(!visible||queue.isEmpty())return;
         video.stopPlayback();preparedPlayer=null;releaseFocus();ready=false;finished=false;dragging=false;resumeMs=Math.max(0,offset);wantPlay=autoplay;
-        Store.Job job=queue.get(index);backgroundButton.setVisibility(BackgroundAudioService.isAudio(job)?View.VISIBLE:View.GONE);title.setText(job.name);position.setText((index+1)+" / "+queue.size());
+        Store.Job job=queue.get(index);backgroundButton.setVisibility(BackgroundAudioService.isAudio(job)?View.VISIBLE:View.GONE);pipButton.setEnabled(isVideo(job)&&getPackageManager().hasSystemFeature(android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE));subtitleButton.setEnabled(isVideo(job));if(!job.id.equals(cueJob)){cues=Collections.emptyList();cueJob="";subtitle.setVisibility(View.GONE);}title.setText(job.name);position.setText((index+1)+" / "+queue.size());
         seek.setEnabled(false);seek.setMax(1);seek.setProgress(0);time.setText("00:00 / 00:00");
         status.setText(tr("جارٍ تجهيز الملف…","Preparing media…"));updatePlay();
         try{video.setVideoURI(Uri.parse(job.uri));}catch(RuntimeException e){ready=false;wantPlay=false;status.setText(tr("الملف غير متاح","File unavailable"));updatePlay();}
@@ -123,14 +123,22 @@ public final class LocalPlayerActivity extends Activity {
     void pausePlayback(){wantPlay=false;if(video!=null&&ready)video.pause();releaseFocus();if(status!=null&&ready)status.setText(tr("متوقف مؤقتًا","Paused"));updatePlay();}
     void releaseFocus(){if(focusHeld&&audio!=null&&focus!=null)audio.abandonAudioFocusRequest(focus);focusHeld=false;}
     void updatePlay(){if(play!=null)play.setText(wantPlay?tr("إيقاف مؤقت","Pause"):tr("تشغيل","Play"));}
-    void refresh(){if(sleepDeadline>0&&SystemClock.elapsedRealtime()>=sleepDeadline){sleepDeadline=0;timerButton.setText(tr("مؤقت النوم","Sleep timer"));pausePlayback();}if(video==null||!ready||dragging)return;int duration=video.getDuration(),pos=video.getCurrentPosition();if(duration>0){seek.setMax(duration);seek.setProgress(Math.max(0,Math.min(pos,duration)));time.setText(clock(pos)+" / "+clock(duration));}}
+    void refresh(){if(sleepDeadline>0&&SystemClock.elapsedRealtime()>=sleepDeadline){sleepDeadline=0;timerButton.setText(tr("مؤقت النوم","Sleep timer"));pausePlayback();}if(video==null||!ready||dragging)return;int duration=video.getDuration(),pos=video.getCurrentPosition();if(duration>0){seek.setMax(duration);seek.setProgress(Math.max(0,Math.min(pos,duration)));time.setText(clock(pos)+" / "+clock(duration));}if(subtitle!=null){String line=SrtTrack.at(cues,pos);if(!line.contentEquals(subtitle.getText()))subtitle.setText(line);subtitle.setVisibility(line.isEmpty()?View.GONE:View.VISIBLE);}}
     void rememberPosition(){if(!ready||queue.isEmpty()||video==null)return;int pos=video.getCurrentPosition(),duration=video.getDuration();queue.get(index).playbackMs=finished||duration>0&&duration-pos<1500?0:Math.max(0,pos);Store.get(this).save();}
     String speedLabel(){return String.format(Locale.US,"%.2f×",playbackSpeed);}
     void chooseSpeed(){int[] speeds={50,75,100,125,150,175,200};String[] labels={"0.50×","0.75×","1.00×","1.25×","1.50×","1.75×","2.00×"};int chosen=2;for(int i=0;i<speeds.length;i++)if(Math.round(playbackSpeed*100)==speeds[i])chosen=i;new AlertDialog.Builder(this).setTitle(tr("سرعة التشغيل","Playback speed")).setSingleChoiceItems(labels,chosen,(d,w)->{playbackSpeed=speeds[w]/100f;Store.settings(this).edit().putInt("player_speed",speeds[w]).apply();speedButton.setText(speedLabel());if(ready&&video.isPlaying())applySpeed();d.dismiss();}).setNegativeButton(tr("إلغاء","Cancel"),null).show();}
     void applySpeed(){if(preparedPlayer==null)return;try{preparedPlayer.setPlaybackParams(preparedPlayer.getPlaybackParams().setSpeed(playbackSpeed));}catch(RuntimeException ex){playbackSpeed=1f;speedButton.setText(speedLabel());Toast.makeText(this,tr("السرعة غير مدعومة لهذا الملف","Speed not supported for this file"),Toast.LENGTH_SHORT).show();}}
     void chooseSleep(){int[] minutes={0,5,15,30,60};new AlertDialog.Builder(this).setTitle(tr("مؤقت إيقاف التشغيل","Sleep timer")).setItems(new String[]{tr("إلغاء المؤقت","Off"),"5 min","15 min","30 min","60 min"},(d,w)->{sleepDeadline=minutes[w]==0?0:SystemClock.elapsedRealtime()+minutes[w]*60000L;timerButton.setText(minutes[w]==0?tr("مؤقت النوم","Sleep timer"):minutes[w]+" min");}).show();}
+    static boolean isVideo(Store.Job job){return LocalPlayerActivity.playable(job)&&"Videos".equals(HttpEngine.category(job.name,job.mime));}
+    void enterPip(){if(!ready||queue.isEmpty()||!isVideo(queue.get(index))||!getPackageManager().hasSystemFeature(android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE)){Toast.makeText(this,tr("النافذة العائمة غير متاحة","Picture-in-picture unavailable"),Toast.LENGTH_SHORT).show();return;}try{pipRequested=true;android.app.PictureInPictureParams params=new android.app.PictureInPictureParams.Builder().setAspectRatio(new android.util.Rational(16,9)).build();if(!enterPictureInPictureMode(params)){pipRequested=false;setPipLayout(false);}}catch(RuntimeException e){pipRequested=false;setPipLayout(false);Toast.makeText(this,tr("تعذر فتح النافذة العائمة","Could not enter picture-in-picture"),Toast.LENGTH_SHORT).show();}}
+    @Override public void onPictureInPictureModeChanged(boolean inPip,android.content.res.Configuration config){super.onPictureInPictureModeChanged(inPip,config);pipRequested=inPip;setPipLayout(inPip);}
+    void setPipLayout(boolean pip){if(playerRoot==null||mediaScreen==null)return;for(int i=0;i<playerRoot.getChildCount();i++){View child=playerRoot.getChildAt(i);if(child!=mediaScreen)child.setVisibility(pip?View.GONE:View.VISIBLE);}if(!pip&&!queue.isEmpty())backgroundButton.setVisibility(BackgroundAudioService.isAudio(queue.get(index))?View.VISIBLE:View.GONE);playerRoot.setPadding(pip?0:dp(10),pip?0:dp(6),pip?0:dp(10),pip?0:dp(8));}
+    void chooseSubtitle(){new AlertDialog.Builder(this).setTitle(tr("الترجمة المحلية","Local subtitles")).setItems(new String[]{tr("اختيار ملف SRT","Choose SRT file"),tr("إيقاف الترجمة","Disable subtitles")},(d,w)->{if(w==1){cues=Collections.emptyList();cueJob="";subtitle.setVisibility(View.GONE);return;}try{startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*"),93);}catch(RuntimeException ex){Toast.makeText(this,tr("لا يوجد منتقي ملفات","No file picker"),Toast.LENGTH_SHORT).show();}}).show();}
+    @Override protected void onActivityResult(int req,int result,Intent data){super.onActivityResult(req,result,data);if(req!=93||result!=RESULT_OK||data==null||data.getData()==null||queue.isEmpty())return;Uri uri=data.getData();String id=queue.get(index).id;new Thread(()->{try(java.io.InputStream in=getContentResolver().openInputStream(uri)){java.util.List<SrtTrack.Cue> parsed=SrtTrack.read(in);handler.post(()->{if(isFinishing()||isDestroyed()||queue.isEmpty()||!id.equals(queue.get(index).id))return;cues=parsed;cueJob=id;Toast.makeText(this,tr("تم تحميل الترجمة","Subtitles loaded")+": "+parsed.size(),Toast.LENGTH_SHORT).show();});}catch(Exception e){handler.post(()->{if(!isFinishing()&&!isDestroyed())Toast.makeText(this,tr("ملف SRT غير صالح أو كبير","Invalid or oversized SRT"),Toast.LENGTH_SHORT).show();});}},"xdownload-srt").start();}
     static String clock(int ms){int sec=Math.max(0,ms)/1000;return sec>=3600?String.format(Locale.US,"%d:%02d:%02d",sec/3600,sec/60%60,sec%60):String.format(Locale.US,"%02d:%02d",sec/60,sec%60);}
-    @Override protected void onResume(){super.onResume();if(video==null)return;visible=true;load(resumeMs,first);first=false;handler.removeCallbacks(ticker);handler.post(ticker);}
-    @Override protected void onPause(){visible=false;handler.removeCallbacks(ticker);if(video!=null){if(ready){rememberPosition();resumeMs=queue.get(index).playbackMs;}video.stopPlayback();preparedPlayer=null;}ready=false;wantPlay=false;releaseFocus();super.onPause();}
+    @Override protected void onResume(){super.onResume();if(video==null)return;if(visible){pipRequested=false;setPipLayout(false);return;}visible=true;load(resumeMs,first);first=false;handler.removeCallbacks(ticker);handler.post(ticker);}
+    @Override protected void onPause(){if(!isInPictureInPictureMode()&&!pipRequested)pauseAndRelease();super.onPause();}
+    @Override protected void onStop(){pauseAndRelease();pipRequested=false;super.onStop();}
+    void pauseAndRelease(){if(!visible)return;visible=false;handler.removeCallbacks(ticker);if(video!=null){if(ready){rememberPosition();resumeMs=queue.get(index).playbackMs;}video.stopPlayback();preparedPlayer=null;}ready=false;wantPlay=false;releaseFocus();}
     @Override protected void onDestroy(){handler.removeCallbacksAndMessages(null);if(video!=null)video.stopPlayback();releaseFocus();super.onDestroy();}
 }
