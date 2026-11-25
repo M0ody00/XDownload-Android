@@ -59,3 +59,5 @@ RC4 FTP/FTPS candidate: anonymous public files only, plaintext opt-in, explicit 
 RC5 visual and clipboard UX changes require device testing: compact home, player tools, cinema/double-tap, PiP, Arabic layouts, old overlay stopped, tile/share, foreground clipboard expiry. No claim of global clipboard monitoring.
 
 RC5 requires 24 device instrumentation tests per API 29/30/35, including caption sharing. Verify authorized real media URLs including audio-only and engine version/device runtime, no background clipboard monitoring; actual user failure link not supplied. Full codebase audit and signed production deployment not complete.
+
+See RC5-AUDIT.md for exact scope and open gates. Do not mark final until exact commit verified and physical device/authorized live-source/signing tests passed.
