@@ -61,3 +61,5 @@ RC5 visual and clipboard UX changes require device testing: compact home, player
 RC5 requires 24 device instrumentation tests per API 29/30/35, including caption sharing. Verify authorized real media URLs including audio-only and engine version/device runtime, no background clipboard monitoring; actual user failure link not supplied. Full codebase audit and signed production deployment not complete.
 
 See RC5-AUDIT.md for exact scope and open gates. Do not mark final until exact commit verified and physical device/authorized live-source/signing tests passed.
+
+4.0 stabilization: version name 4.0, no additional RC stages. Exact commit must pass 25 instrumentation tests per API29/30/35 and JVM/size/signature gates after R8/resource shrink. Physical device, signed owner release, real authorized source validation, and full security audit remain unverified. Native bundled functionality retained, optional native modules not implemented; no target size or crash-free percentage claimed.

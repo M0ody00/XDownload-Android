@@ -7,12 +7,13 @@ android {
   minSdk 29
   if (project.hasProperty('phoneAbi')) { ndk { abiFilters project.property('phoneAbi').toString() } }
   targetSdk 34
-  versionCode 21
-  versionName '4.0-rc5'
+  versionCode 22
+  versionName '4.0'
   testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
  }
  packaging { jniLibs { useLegacyPackaging = true; pickFirsts += ['**/libc++_shared.so'] }; resources { merges += ['META-INF/LICENSE*','META-INF/NOTICE*']; excludes += ['META-INF/DEPENDENCIES','META-INF/versions/**/module-info.class'] } }
  compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+ buildTypes { debug { minifyEnabled true; shrinkResources true; proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro' }; release { minifyEnabled true; shrinkResources true; proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro' } }
  if (System.getenv('XDOWNLOAD_KEYSTORE')) {
   signingConfigs { persistent { storeFile file(System.getenv('XDOWNLOAD_KEYSTORE')); storePassword System.getenv('XDOWNLOAD_STORE_PASSWORD'); keyAlias System.getenv('XDOWNLOAD_KEY_ALIAS'); keyPassword System.getenv('XDOWNLOAD_KEY_PASSWORD') } }
   buildTypes { release { signingConfig signingConfigs.persistent } }
