@@ -23,3 +23,5 @@ Preview 4 includes sequential local batch audio conversion to ZIP; batch video a
 Preview 4 follow-up adds encrypted settings backup only (not file/history backup), actual video-image and backup regression gate. Final release still blocked until tests, real ARM64 device and durable signing verification, plus remaining scope.
 
 Candidate adds selected storage-tree output, with Android/provider restrictions; device and removable-storage testing remains open.
+
+RC1 adds bounded 7z/RAR candidate; 20-test gate includes real 7z extraction. RAR fixture testing, full license/security audit and physical benchmarks remain mandatory. A release candidate is not an approved Final Edition.

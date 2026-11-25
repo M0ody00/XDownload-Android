@@ -88,4 +88,14 @@ import android.content.*;import android.net.Uri;import androidx.test.core.app.Ac
    prefs.edit().clear().commit();SettingsBackupActivity.apply(prefs,new org.json.JSONObject(new String(java.nio.file.Files.readAllBytes(decoded.toPath()),java.nio.charset.StandardCharsets.UTF_8)));assertEquals(16,prefs.getInt("connections",0));assertFalse(prefs.contains("private_url"));
   }finally{prefs.edit().clear().commit();FileTools.deleteTree(dir);}
  }
+
+ @Test public void sevenZipRealExtractionAndTraversalRejection()throws Exception{
+  Context c=InstrumentationRegistry.getInstrumentation().getTargetContext();File dir=new File(c.getCacheDir(),"archive-test-"+java.util.UUID.randomUUID());assertTrue(dir.mkdir());try{
+   byte[] payload=new byte[32768];new java.util.Random(41).nextBytes(payload);File input=new File(dir,"payload.bin"),archive=new File(dir,"sample.7z");java.nio.file.Files.write(input.toPath(),payload);
+   try(org.apache.commons.compress.archivers.sevenz.SevenZOutputFile z=new org.apache.commons.compress.archivers.sevenz.SevenZOutputFile(archive)){z.putArchiveEntry(z.createArchiveEntry(input,"folder/payload.bin"));z.write(payload);z.closeArchiveEntry();}
+   File extracted=new File(dir,"extracted");assertEquals(1,ArchiveTools.extract(archive,extracted));assertArrayEquals(payload,java.nio.file.Files.readAllBytes(new File(extracted,"folder/payload.bin").toPath()));
+   File bad=new File(dir,"bad.7z");try(org.apache.commons.compress.archivers.sevenz.SevenZOutputFile z=new org.apache.commons.compress.archivers.sevenz.SevenZOutputFile(bad)){z.putArchiveEntry(z.createArchiveEntry(input,"../escape"));z.write(payload);z.closeArchiveEntry();}
+   try{ArchiveTools.extract(bad,new File(dir,"bad-out"));fail("Traversal must be rejected");}catch(IOException expected){assertFalse(new File(dir,"escape").exists());}
+  }finally{FileTools.deleteTree(dir);}
+ }
 }
