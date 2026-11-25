@@ -11,7 +11,7 @@ final class Store {
  JSONObject json()throws JSONException{return new JSONObject().put("id",id).put("url",url).put("name",name).put("mime",mime).put("state",state).put("etag",etag).put("modified",modified).put("uri",uri).put("sha",sha).put("error",error).put("expected",expected).put("selector",selector).put("extension",extension).put("mp3Rate",mp3Rate).put("notBefore",notBefore).put("done",done).put("total",total);}
  }
  private static Store instance;private final SharedPreferences prefs;private final ArrayList<Job> jobs=new ArrayList<>();
- private Store(Context c){prefs=c.getSharedPreferences("downloads",0);try{JSONArray a=new JSONArray(prefs.getString("jobs","[]"));for(int i=0;i<a.length();i++)jobs.add(new Job(a.getJSONObject(i)));}catch(JSONException ignored){}}
+ private Store(Context c){prefs=c.getSharedPreferences("downloads",0);try{JSONArray a=new JSONArray(prefs.getString("jobs","[]"));for(int i=0;i<a.length();i++){try{Job j=new Job(a.getJSONObject(i));if(j.id.matches("[a-f0-9-]{36}"))jobs.add(j);}catch(JSONException ignored){}}}catch(JSONException ignored){}}
  static synchronized Store get(Context c){if(instance==null)instance=new Store(c.getApplicationContext());return instance;}
  synchronized ArrayList<Job> list(){return new ArrayList<>(jobs);}
  synchronized Job getJob(String id){for(Job j:jobs)if(j.id.equals(id))return j;return null;}
