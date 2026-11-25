@@ -57,4 +57,12 @@ import android.content.*;import android.net.Uri;import androidx.test.core.app.Ac
    }
   }finally{Store.get(c).remove(job);c.getContentResolver().delete(uri,null,null);}
  }
+
+ @Test public void offlineReaderRoundTripAndSettingsSearch()throws Exception{
+  Context c=InstrumentationRegistry.getInstrumentation().getTargetContext();
+  String marker="test-"+java.util.UUID.randomUUID();String id=null;
+  try{OfflinePages.save(c,marker,"https://example.invalid/reader","Plain text fixture");for(OfflinePages.Page p:OfflinePages.list(c))if(marker.equals(p.title)){id=p.id;assertEquals("Plain text fixture",p.text);}assertNotNull(id);OfflinePages.delete(c,id);for(OfflinePages.Page p:OfflinePages.list(c))assertFalse(marker.equals(p.title));}
+  finally{if(id!=null)OfflinePages.delete(c,id);}
+  try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)){scenario.onActivity(a->{a.show(4);MainActivity.filterSettings(a.body,"JavaScript");int visible=0;for(int i=2;i<a.body.getChildCount();i++)if(a.body.getChildAt(i).getVisibility()==android.view.View.VISIBLE)visible++;assertEquals(1,visible);MainActivity.filterSettings(a.body,"");for(int i=2;i<a.body.getChildCount();i++)assertEquals(android.view.View.VISIBLE,a.body.getChildAt(i).getVisibility());});}
+ }
 }
