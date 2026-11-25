@@ -14,7 +14,7 @@ public abstract class SecureActivity extends Activity{
  static boolean needsAuth(boolean hasUnlocked,long away,long now){return !hasUnlocked||away>=0&&(now<away||now-away>=AWAY_MS);}
  File lockMarker(){return new File(getNoBackupFilesDir(),"screen-lock.enabled");}
  boolean screenLockEnabled(){return lockMarker().isFile();}
- boolean screenAccessAllowed(){return !screenLockEnabled()||unlocked;}
+ boolean screenAccessAllowed(){return !screenLockEnabled()||!needsAuth(unlocked,awayAt,SystemClock.elapsedRealtime());}
  String lockText(String ar,String en){return Store.settings(this).getBoolean("english",false)?en:ar;}
  void hideContent(boolean hide){getWindow().getDecorView();View content=findViewById(android.R.id.content);if(content!=null)content.setVisibility(hide?View.INVISIBLE:View.VISIBLE);}
  @Override protected void onCreate(Bundle b){super.onCreate(b);if(screenLockEnabled()){getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);hideContent(true);}}
