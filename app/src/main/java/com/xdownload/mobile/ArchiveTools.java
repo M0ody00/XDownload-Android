@@ -8,6 +8,8 @@ import com.github.junrar.rarfile.FileHeader;
 /** Extracts only regular files to a fresh private directory. No archive links or absolute paths. */
 final class ArchiveTools{
  static final long MAX=512L*1024*1024,RESERVE=16L*1024*1024;static final int MAX_ENTRIES=1000,MEMORY_KIB=65536;
+ static int memoryBudgetKiB(long max,long allocated,long free){long headroom=Math.max(0,max-allocated+free);return (int)Math.max(0,Math.min(MEMORY_KIB,(headroom-4L*1024*1024)/1024/2));}
+ static int memoryBudgetKiB(){Runtime r=Runtime.getRuntime();return memoryBudgetKiB(r.maxMemory(),r.totalMemory(),r.freeMemory());}
  static int extract(File source,File root)throws Exception{
   byte[] sig=new byte[8];int n;try(InputStream in=new FileInputStream(source)){n=in.read(sig);}
   if(n>=6&&sig[0]==0x37&&sig[1]==0x7a&&(sig[2]&255)==0xbc&&(sig[3]&255)==0xaf&&sig[4]==0x27&&sig[5]==0x1c)return seven(source,root);
@@ -31,16 +33,16 @@ final class ArchiveTools{
   @Override public void write(byte[] b,int off,int len)throws IOException{check(len);out.write(b,off,len);}
  }
  static int seven(File source,File root)throws Exception{
-  prepare(root);int entries=0;long total=0;byte[] buf=new byte[65536];
-  try(SevenZFile z=SevenZFile.builder().setFile(source).setMaxMemoryLimitKiB(MEMORY_KIB).get()){
+  int budget=memoryBudgetKiB();if(budget<512)throw new IOException("Insufficient memory for archive extraction");prepare(root);int entries=0;long total=0;byte[] buf=new byte[65536];
+  try(SevenZFile z=SevenZFile.builder().setFile(source).setMaxMemoryLimitKiB(budget).get()){
    SevenZArchiveEntry entry;while((entry=z.getNextEntry())!=null){if(++entries>MAX_ENTRIES)throw new IOException("Archive entry limit");if(entry.isAntiItem())throw new IOException("Unsupported archive entry");File f=target(root,entry.getName());if(entry.isDirectory()){directory(f);continue;}long size=entry.getSize();checkSize(size,total);directory(f.getParentFile());if(!f.createNewFile())throw new IOException("Duplicate archive path");
     try(Bounded out=new Bounded(new FileOutputStream(f),root,size)){int n;while((n=z.read(buf))!=-1){out.write(buf,0,n);}if(out.count!=size)throw new IOException("Incomplete archive entry");}total+=size;
    }
   }if(entries==0)throw new IOException("Empty archive");return entries;
  }
  static int rar(File source,File root)throws Exception{
-  prepare(root);int entries=0;long total=0;
-  try(Archive archive=new Archive(source,ArchiveOptions.builder().maxDictionarySize(64L*1024*1024).build())){
+  int budget=memoryBudgetKiB();if(budget<512)throw new IOException("Insufficient memory for archive extraction");prepare(root);int entries=0;long total=0;
+  try(Archive archive=new Archive(source,ArchiveOptions.builder().maxDictionarySize(budget*1024L).build())){
    if(archive.isEncrypted())throw new IOException("Encrypted RAR unsupported");
    for(FileHeader entry:archive.getFileHeaders()){if(++entries>MAX_ENTRIES)throw new IOException("Archive entry limit");if(entry.isEncrypted()||entry.isSplitBefore()||entry.isSplitAfter()||entry.getRedirection()!=null)throw new IOException("Encrypted, split or linked RAR entry unsupported");
     File f=target(root,entry.getFileName().replace('\\','/'));if(entry.isDirectory()){directory(f);continue;}long size=entry.getFullUnpackSize();checkSize(size,total);directory(f.getParentFile());if(!f.createNewFile())throw new IOException("Duplicate archive path");
