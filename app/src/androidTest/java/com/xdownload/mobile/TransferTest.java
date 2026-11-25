@@ -53,9 +53,15 @@ import android.content.*;import android.net.Uri;import androidx.test.core.app.Ac
      if(!playing.get())Thread.sleep(100);
     }
     assertTrue("Local WAV must prepare",prepared.get());assertTrue("Local WAV must play",playing.get());
+    scenario.onActivity(a->{a.pausePlayback();BackgroundAudioService.launch(a,job.id,0);});
     scenario.moveToState(androidx.lifecycle.Lifecycle.State.CREATED);
+    long audioUntil=android.os.SystemClock.elapsedRealtime()+10000;
+    while(android.os.SystemClock.elapsedRealtime()<audioUntil&&!BackgroundAudioService.playingForTest)Thread.sleep(50);
+    assertTrue("Background audio must actually play",BackgroundAudioService.playingForTest);
+    assertEquals(job.id,BackgroundAudioService.currentId);
+    c.stopService(new Intent(c,BackgroundAudioService.class));
    }
-  }finally{Store.get(c).remove(job);c.getContentResolver().delete(uri,null,null);}
+  }finally{c.stopService(new Intent(c,BackgroundAudioService.class));Store.get(c).remove(job);c.getContentResolver().delete(uri,null,null);}
  }
 
  @Test public void offlineReaderRoundTripAndSettingsSearch()throws Exception{

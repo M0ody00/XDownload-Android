@@ -16,7 +16,7 @@ public final class LocalPlayerActivity extends Activity {
     VideoView video;
     SeekBar seek;
     TextView title, status, time, position;
-    Button play, repeat, speedButton, timerButton;
+    Button play, repeat, speedButton, timerButton, backgroundButton;
     MediaPlayer preparedPlayer;float playbackSpeed=1f;long sleepDeadline=0;
     AudioManager audio;
     AudioFocusRequest focus;
@@ -85,7 +85,7 @@ public final class LocalPlayerActivity extends Activity {
         play=button(tr("تشغيل","Play"),()->{if(wantPlay||(ready&&video.isPlaying()))pausePlayback();else startPlayback();});item(controls,play);
         item(controls,button(tr("التالي","Next"),()->move(1)));root.addView(controls);
         LinearLayout extras=new LinearLayout(this);repeat=button(repeatLabel(),this::chooseRepeat);item(extras,repeat);
-        item(extras,button(tr("قائمة التشغيل","Playlist"),this::chooseTrack));root.addView(extras);LinearLayout more=new LinearLayout(this);speedButton=button(speedLabel(),this::chooseSpeed);item(more,speedButton);timerButton=button(tr("مؤقت النوم","Sleep timer"),this::chooseSleep);item(more,timerButton);root.addView(more);setContentView(root);
+        item(extras,button(tr("قائمة التشغيل","Playlist"),this::chooseTrack));root.addView(extras);LinearLayout more=new LinearLayout(this);speedButton=button(speedLabel(),this::chooseSpeed);item(more,speedButton);timerButton=button(tr("مؤقت النوم","Sleep timer"),this::chooseSleep);item(more,timerButton);root.addView(more);backgroundButton=button(tr("تشغيل الصوت في الخلفية","Play audio in background"),this::handoffAudio);root.addView(backgroundButton,new LinearLayout.LayoutParams(-1,dp(48)));setContentView(root);
 
         seek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
             public void onStartTrackingTouch(SeekBar b){dragging=true;}
@@ -106,13 +106,14 @@ public final class LocalPlayerActivity extends Activity {
     void load(int offset,boolean autoplay){
         if(!visible||queue.isEmpty())return;
         video.stopPlayback();preparedPlayer=null;releaseFocus();ready=false;finished=false;dragging=false;resumeMs=Math.max(0,offset);wantPlay=autoplay;
-        Store.Job job=queue.get(index);title.setText(job.name);position.setText((index+1)+" / "+queue.size());
+        Store.Job job=queue.get(index);backgroundButton.setVisibility(BackgroundAudioService.isAudio(job)?View.VISIBLE:View.GONE);title.setText(job.name);position.setText((index+1)+" / "+queue.size());
         seek.setEnabled(false);seek.setMax(1);seek.setProgress(0);time.setText("00:00 / 00:00");
         status.setText(tr("جارٍ تجهيز الملف…","Preparing media…"));updatePlay();
         try{video.setVideoURI(Uri.parse(job.uri));}catch(RuntimeException e){ready=false;wantPlay=false;status.setText(tr("الملف غير متاح","File unavailable"));updatePlay();}
     }
+    void handoffAudio(){if(!ready||queue.isEmpty()||!BackgroundAudioService.isAudio(queue.get(index)))return;int offset=Math.max(0,video.getCurrentPosition());rememberPosition();pausePlayback();try{BackgroundAudioService.launch(this,queue.get(index).id,offset);finish();}catch(RuntimeException ex){status.setText(tr("تعذر تشغيل الخدمة","Could not start audio service"));}}
     void startPlayback(){
-        if(!visible||video==null)return;wantPlay=true;
+        if(!visible||video==null)return;wantPlay=true;stopService(new Intent(this,BackgroundAudioService.class));
         if(!ready){updatePlay();return;}
         if(!focusHeld){focusHeld=audio!=null&&audio.requestAudioFocus(focus)==AudioManager.AUDIOFOCUS_REQUEST_GRANTED;}
         if(!focusHeld){wantPlay=false;status.setText(tr("الصوت مستخدم في تطبيق آخر","Audio focus unavailable"));updatePlay();return;}
