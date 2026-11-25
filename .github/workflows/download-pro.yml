@@ -89,7 +89,7 @@ jobs:
             adb install -g candidate/XDownload-Pro.apk
             adb install -g candidate/test.apk
             adb shell am instrument -w com.xdownload.pro.next.test/androidx.test.runner.AndroidJUnitRunner | tee result.txt
-            grep -F 'OK (8 tests)' result.txt
+            grep -F 'OK (9 tests)' result.txt
   verified:
     needs: [build, emulator]
     runs-on: ubuntu-latest
@@ -100,7 +100,7 @@ jobs:
           path: candidate
       - uses: actions/upload-artifact@v4
         with:
-          name: XDownload-Pro-2.4-RC1-TESTED
+          name: XDownload-Pro-2.5-RC1-TESTED
           path: candidate/XDownload-Pro.apk
       - uses: actions/download-artifact@v4
         with:
@@ -108,5 +108,5 @@ jobs:
           path: phone
       - uses: actions/upload-artifact@v4
         with:
-          name: XDownload-Pro-2.4-RC1-ARM64-DEVICE-TEST-REQUIRED
+          name: XDownload-Pro-2.5-RC1-ARM64-DEVICE-TEST-REQUIRED
           path: phone/XDownload-Pro-ARM64.apk

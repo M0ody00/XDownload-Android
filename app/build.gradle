@@ -7,8 +7,8 @@ android {
   minSdk 29
   if (project.hasProperty('phoneAbi')) { ndk { abiFilters project.property('phoneAbi').toString() } }
   targetSdk 34
-  versionCode 9
-  versionName '2.4-rc1'
+  versionCode 10
+  versionName '2.5-rc1'
   testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
  }
  packaging { jniLibs { useLegacyPackaging = true; pickFirsts += ['**/libc++_shared.so'] } }
