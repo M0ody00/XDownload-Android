@@ -15,7 +15,7 @@ public final class BackgroundAudioService extends Service {
  static volatile boolean playingForTest=false;
  static volatile String currentId="";
  final Handler main=new Handler(Looper.getMainLooper());
- MediaPlayer player; MediaSession session; AudioManager audio; AudioFocusRequest focus;
+ MediaPlayer player;final AudioEffects effects=new AudioEffects(); MediaSession session; AudioManager audio; AudioFocusRequest focus;
  Store.Job job; boolean ready,held,requested,noisyRegistered;
  int initialPosition;
  final BroadcastReceiver noisy=new BroadcastReceiver(){@Override public void onReceive(Context c,Intent i){if(AudioManager.ACTION_AUDIO_BECOMING_NOISY.equals(i.getAction()))pause();}};
@@ -52,7 +52,7 @@ public final class BackgroundAudioService extends Service {
   try{MediaPlayer next=new MediaPlayer();player=next;
    next.setAudioAttributes(new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build());next.setWakeMode(this,PowerManager.PARTIAL_WAKE_LOCK);
    next.setDataSource(this,Uri.parse(job.uri));
-   next.setOnPreparedListener(mp->{if(mp!=player)return;ready=true;int d=mp.getDuration();session.setMetadata(new MediaMetadata.Builder().putString(MediaMetadata.METADATA_KEY_TITLE,job.name).putLong(MediaMetadata.METADATA_KEY_DURATION,d).build());if(initialPosition>0&&d>0)mp.seekTo(Math.min(initialPosition,Math.max(0,d-1)));if(requested)resume();else publish();});
+   next.setOnPreparedListener(mp->{if(mp!=player)return;effects.attach(this,mp.getAudioSessionId());ready=true;int d=mp.getDuration();session.setMetadata(new MediaMetadata.Builder().putString(MediaMetadata.METADATA_KEY_TITLE,job.name).putLong(MediaMetadata.METADATA_KEY_DURATION,d).build());if(initialPosition>0&&d>0)mp.seekTo(Math.min(initialPosition,Math.max(0,d-1)));if(requested)resume();else publish();});
    next.setOnCompletionListener(mp->{if(mp!=player)return;if(job!=null){job.playbackMs=0;Store.get(this).save();}ready=false;finishPlayback();});
    next.setOnErrorListener((mp,what,extra)->{if(mp==player)finishPlayback();return true;});
    next.prepareAsync();
@@ -66,7 +66,7 @@ public final class BackgroundAudioService extends Service {
  void pause(){requested=false;if(ready&&player!=null)try{player.pause();}catch(RuntimeException ignored){}playingForTest=false;remember();releaseFocus();publish();}
  void remember(){if(job!=null&&ready&&player!=null)try{int pos=player.getCurrentPosition(),d=player.getDuration();job.playbackMs=d>0&&d-pos<1500?0:Math.max(0,pos);Store.get(this).save();}catch(RuntimeException ignored){}}
  void releaseFocus(){if(held&&audio!=null)audio.abandonAudioFocusRequest(focus);held=false;}
- void releasePlayer(){ready=false;playingForTest=false;releaseFocus();if(player!=null){player.release();player=null;}}
+ void releasePlayer(){effects.release();ready=false;playingForTest=false;releaseFocus();if(player!=null){player.release();player=null;}}
  PendingIntent command(String action,int request){return PendingIntent.getService(this,request,new Intent(this,BackgroundAudioService.class).setAction(action),PendingIntent.FLAG_IMMUTABLE|PendingIntent.FLAG_UPDATE_CURRENT);}
  Notification notification(){
   String name=job==null?"X Download Audio":job.name;boolean playing=playingForTest;

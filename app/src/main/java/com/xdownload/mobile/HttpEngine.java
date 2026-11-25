@@ -6,7 +6,7 @@ import java.util.regex.*;
 import java.security.MessageDigest;
 
 final class HttpEngine {
- interface Observer { boolean proceed(); void progress(long bytes,long total,String etag,String modified)throws IOException; }
+ interface Observer { default boolean throttle(int bytes)throws IOException{return proceed();} boolean proceed(); void progress(long bytes,long total,String etag,String modified)throws IOException; }
  static final class Info { final String name,mime,etag,modified;final long size;final boolean ranges;
   Info(String name,String mime,long size,String etag,String modified,boolean ranges){this.name=name;this.mime=mime;this.size=size;this.etag=etag;this.modified=modified;this.ranges=ranges;} }
  static URL validated(String value,boolean http)throws IOException{try{URL u=new URL(value.trim());String protocol=u.getProtocol();if(!("https".equalsIgnoreCase(protocol)||http&&"http".equalsIgnoreCase(protocol))||u.getHost().isEmpty()||u.getUserInfo()!=null)throw new IOException("Use an authorized HTTPS download link");return u;}catch(IllegalArgumentException e){throw new IOException("Invalid URL");}}
@@ -31,7 +31,7 @@ final class HttpEngine {
    else offset=0;
    if(!o.proceed())return -1;
    try(RandomAccessFile out=new RandomAccessFile(part,"rw");InputStream in=c.getInputStream()){out.setLength(offset);out.seek(offset);long done=offset;long start=System.nanoTime(),last=0;o.progress(done,total,i.etag,i.modified);byte[] buf=new byte[65536];int count;
-    while(o.proceed()&&(count=in.read(buf))!=-1){out.write(buf,0,count);done+=count;if(total>=0&&done>total)throw new IOException("Response exceeded expected size");if(rate>0){long target=(long)((done-offset)*1000000000.0/rate);long delay=(target-(System.nanoTime()-start))/1000000;while(delay>0&&o.proceed()){try{Thread.sleep(Math.min(delay,200));}catch(InterruptedException e){Thread.currentThread().interrupt();return -1;}delay=(target-(System.nanoTime()-start))/1000000;}}
+    while(o.proceed()&&(count=in.read(buf))!=-1){if(!o.throttle(count))return -1;out.write(buf,0,count);done+=count;if(total>=0&&done>total)throw new IOException("Response exceeded expected size");if(rate>0){long target=(long)((done-offset)*1000000000.0/rate);long delay=(target-(System.nanoTime()-start))/1000000;while(delay>0&&o.proceed()){try{Thread.sleep(Math.min(delay,200));}catch(InterruptedException e){Thread.currentThread().interrupt();return -1;}delay=(target-(System.nanoTime()-start))/1000000;}}
     if(System.nanoTime()-last>350000000){o.progress(done,total,i.etag,i.modified);last=System.nanoTime();}}
     out.getFD().sync();o.progress(done,total,i.etag,i.modified);if(!o.proceed())return -1;if(total>=0&&done!=total)throw new IOException("Incomplete response");return done;
    }

@@ -17,7 +17,7 @@ public final class LocalPlayerActivity extends Activity {
     SeekBar seek;
     TextView title, status, time, position, subtitle;LinearLayout playerRoot;FrameLayout mediaScreen;Button pipButton,subtitleButton;boolean pipRequested=false;java.util.List<SrtTrack.Cue> cues=Collections.emptyList();String cueJob="";
     Button play, repeat, speedButton, timerButton, backgroundButton;
-    MediaPlayer preparedPlayer;float playbackSpeed=1f;long sleepDeadline=0;
+    MediaPlayer preparedPlayer;final AudioEffects effects=new AudioEffects();float playbackSpeed=1f;long sleepDeadline=0;
     AudioManager audio;
     AudioFocusRequest focus;
     boolean ready, visible, wantPlay, dragging, finished, focusHeld, first=true, en;
@@ -85,16 +85,16 @@ public final class LocalPlayerActivity extends Activity {
         play=button(tr("تشغيل","Play"),()->{if(wantPlay||(ready&&video.isPlaying()))pausePlayback();else startPlayback();});item(controls,play);
         item(controls,button(tr("التالي","Next"),()->move(1)));root.addView(controls);
         LinearLayout extras=new LinearLayout(this);repeat=button(repeatLabel(),this::chooseRepeat);item(extras,repeat);
-        item(extras,button(tr("قائمة التشغيل","Playlist"),this::chooseTrack));root.addView(extras);LinearLayout more=new LinearLayout(this);speedButton=button(speedLabel(),this::chooseSpeed);item(more,speedButton);timerButton=button(tr("مؤقت النوم","Sleep timer"),this::chooseSleep);item(more,timerButton);root.addView(more);backgroundButton=button(tr("تشغيل الصوت في الخلفية","Play audio in background"),this::handoffAudio);root.addView(backgroundButton,new LinearLayout.LayoutParams(-1,dp(48)));LinearLayout options=new LinearLayout(this);pipButton=button(tr("نافذة عائمة","Picture-in-picture"),this::enterPip);item(options,pipButton);subtitleButton=button(tr("ترجمة SRT","SRT subtitles"),this::chooseSubtitle);item(options,subtitleButton);root.addView(options);setContentView(root);
+        item(extras,button(tr("قائمة التشغيل","Playlist"),this::chooseTrack));root.addView(extras);LinearLayout more=new LinearLayout(this);speedButton=button(speedLabel(),this::chooseSpeed);item(more,speedButton);timerButton=button(tr("مؤقت النوم","Sleep timer"),this::chooseSleep);item(more,timerButton);root.addView(more);backgroundButton=button(tr("تشغيل الصوت في الخلفية","Play audio in background"),this::handoffAudio);root.addView(backgroundButton,new LinearLayout.LayoutParams(-1,dp(48)));LinearLayout options=new LinearLayout(this);pipButton=button(tr("نافذة عائمة","Picture-in-picture"),this::enterPip);item(options,pipButton);subtitleButton=button(tr("ترجمة SRT","SRT subtitles"),this::chooseSubtitle);item(options,subtitleButton);root.addView(options);root.addView(button(tr("معادل الصوت و Bass","Equalizer & Bass"),this::chooseEffects),new LinearLayout.LayoutParams(-1,dp(48)));setContentView(root);
 
         seek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
             public void onStartTrackingTouch(SeekBar b){dragging=true;}
             public void onProgressChanged(SeekBar b,int progress,boolean user){if(user&&ready)time.setText(clock(progress)+" / "+clock(video.getDuration()));}
             public void onStopTrackingTouch(SeekBar b){if(ready){video.seekTo(b.getProgress());resumeMs=b.getProgress();finished=false;}dragging=false;refresh();}
         });
-        video.setOnPreparedListener(mp->{if(!visible)return;preparedPlayer=mp;ready=true;finished=false;int duration=video.getDuration();seek.setEnabled(duration>0);seek.setMax(Math.max(1,duration));if(resumeMs>0&&duration>0)video.seekTo(Math.min(resumeMs,Math.max(0,duration-1)));status.setText(tr("جاهز للتشغيل","Ready"));if(wantPlay)startPlayback();refresh();});
+        video.setOnPreparedListener(mp->{if(!visible)return;preparedPlayer=mp;effects.attach(this,mp.getAudioSessionId());ready=true;finished=false;int duration=video.getDuration();seek.setEnabled(duration>0);seek.setMax(Math.max(1,duration));if(resumeMs>0&&duration>0)video.seekTo(Math.min(resumeMs,Math.max(0,duration-1)));status.setText(tr("جاهز للتشغيل","Ready"));if(wantPlay)startPlayback();refresh();});
         video.setOnCompletionListener(mp->{if(!visible)return;queue.get(index).playbackMs=0;Store.get(this).save();int next=nextIndex(index,queue.size(),mode,true);if(next==index){video.seekTo(0);finished=false;startPlayback();}else if(next>=0){index=next;load(queue.get(index).playbackMs,true);}else{finished=true;wantPlay=false;releaseFocus();status.setText(tr("انتهى التشغيل","Playback finished"));updatePlay();refresh();}});
-        video.setOnErrorListener((mp,what,extra)->{preparedPlayer=null;ready=false;wantPlay=false;finished=false;seek.setEnabled(false);releaseFocus();status.setText(tr("تعذر تشغيل الملف. جرّب فتحه بمشغل خارجي.","Cannot play this format or file. Try an external player."));updatePlay();return true;});
+        video.setOnErrorListener((mp,what,extra)->{effects.release();preparedPlayer=null;ready=false;wantPlay=false;finished=false;seek.setEnabled(false);releaseFocus();status.setText(tr("تعذر تشغيل الملف. جرّب فتحه بمشغل خارجي.","Cannot play this format or file. Try an external player."));updatePlay();return true;});
     }
     String repeatLabel(){return mode==1?tr("تكرار ملف","Repeat one"):mode==2?tr("تكرار الكل","Repeat all"):tr("بدون تكرار","Repeat off");}
     void chooseRepeat(){new AlertDialog.Builder(this).setTitle(tr("وضع التكرار","Repeat mode")).setSingleChoiceItems(new String[]{tr("بدون تكرار","Off"),tr("تكرار ملف واحد","One"),tr("تكرار الكل","All")},mode,(d,w)->{mode=w;Store.settings(this).edit().putInt("player_repeat",mode).apply();repeat.setText(repeatLabel());d.dismiss();}).setNegativeButton(tr("إلغاء","Cancel"),null).show();}
@@ -105,12 +105,13 @@ public final class LocalPlayerActivity extends Activity {
     }
     void load(int offset,boolean autoplay){
         if(!visible||queue.isEmpty())return;
-        video.stopPlayback();preparedPlayer=null;releaseFocus();ready=false;finished=false;dragging=false;resumeMs=Math.max(0,offset);wantPlay=autoplay;
+        video.stopPlayback();effects.release();preparedPlayer=null;releaseFocus();ready=false;finished=false;dragging=false;resumeMs=Math.max(0,offset);wantPlay=autoplay;
         Store.Job job=queue.get(index);backgroundButton.setVisibility(BackgroundAudioService.isAudio(job)?View.VISIBLE:View.GONE);pipButton.setEnabled(isVideo(job)&&getPackageManager().hasSystemFeature(android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE));subtitleButton.setEnabled(isVideo(job));if(!job.id.equals(cueJob)){cues=Collections.emptyList();cueJob="";subtitle.setVisibility(View.GONE);}title.setText(job.name);position.setText((index+1)+" / "+queue.size());
         seek.setEnabled(false);seek.setMax(1);seek.setProgress(0);time.setText("00:00 / 00:00");
         status.setText(tr("جارٍ تجهيز الملف…","Preparing media…"));updatePlay();
         try{video.setVideoURI(Uri.parse(job.uri));}catch(RuntimeException e){ready=false;wantPlay=false;status.setText(tr("الملف غير متاح","File unavailable"));updatePlay();}
     }
+    void chooseEffects(){if(preparedPlayer==null||!ready){Toast.makeText(this,tr("شغّل ملفًا أولًا","Play a file first"),Toast.LENGTH_SHORT).show();return;}effects.dialog(this,en);}
     void handoffAudio(){if(!ready||queue.isEmpty()||!BackgroundAudioService.isAudio(queue.get(index)))return;int offset=Math.max(0,video.getCurrentPosition());rememberPosition();pausePlayback();try{BackgroundAudioService.launch(this,queue.get(index).id,offset);finish();}catch(RuntimeException ex){status.setText(tr("تعذر تشغيل الخدمة","Could not start audio service"));}}
     void startPlayback(){
         if(!visible||video==null)return;wantPlay=true;stopService(new Intent(this,BackgroundAudioService.class));
@@ -139,6 +140,6 @@ public final class LocalPlayerActivity extends Activity {
     @Override protected void onResume(){super.onResume();if(video==null)return;if(visible){pipRequested=false;setPipLayout(false);return;}visible=true;load(resumeMs,first);first=false;handler.removeCallbacks(ticker);handler.post(ticker);}
     @Override protected void onPause(){if(!isInPictureInPictureMode()&&!pipRequested)pauseAndRelease();super.onPause();}
     @Override protected void onStop(){pauseAndRelease();pipRequested=false;super.onStop();}
-    void pauseAndRelease(){if(!visible)return;visible=false;handler.removeCallbacks(ticker);if(video!=null){if(ready){rememberPosition();resumeMs=queue.get(index).playbackMs;}video.stopPlayback();preparedPlayer=null;}ready=false;wantPlay=false;releaseFocus();}
-    @Override protected void onDestroy(){handler.removeCallbacksAndMessages(null);if(video!=null)video.stopPlayback();releaseFocus();super.onDestroy();}
+    void pauseAndRelease(){if(!visible)return;visible=false;handler.removeCallbacks(ticker);if(video!=null){if(ready){rememberPosition();resumeMs=queue.get(index).playbackMs;}video.stopPlayback();effects.release();preparedPlayer=null;}ready=false;wantPlay=false;releaseFocus();}
+    @Override protected void onDestroy(){handler.removeCallbacksAndMessages(null);effects.release();if(video!=null)video.stopPlayback();releaseFocus();super.onDestroy();}
 }

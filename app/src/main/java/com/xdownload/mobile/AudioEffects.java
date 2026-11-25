@@ -1,0 +1,14 @@
+package com.xdownload.mobile;
+import android.app.*;
+import android.content.*;
+import android.media.audiofx.*;
+import android.widget.*;
+/** Optional platform audio effects; unsupported devices keep ordinary playback. */
+final class AudioEffects{
+ Equalizer eq;BassBoost bass;Context context;
+ void attach(Context c,int session){release();context=c.getApplicationContext();if(session<=0)return;try{eq=new Equalizer(0,session);applyEq();}catch(RuntimeException e){if(eq!=null){eq.release();eq=null;}}try{bass=new BassBoost(0,session);applyBass();}catch(RuntimeException e){if(bass!=null){bass.release();bass=null;}}}
+ void applyEq(){if(eq==null||context==null)return;int choice=Store.settings(context).getInt("eq_preset",-1);try{if(choice>=0&&choice<eq.getNumberOfPresets()){eq.usePreset((short)choice);eq.setEnabled(true);}else eq.setEnabled(false);}catch(RuntimeException ignored){}}
+ void applyBass(){if(bass==null||context==null)return;int value=Math.max(0,Math.min(1000,Store.settings(context).getInt("bass_strength",0)));try{if(bass.getStrengthSupported())bass.setStrength((short)value);bass.setEnabled(value>0);}catch(RuntimeException ignored){}}
+ void dialog(Activity a,boolean en){if(eq==null&&bass==null){Toast.makeText(a,en?"Audio effects unavailable":"المؤثرات غير مدعومة",Toast.LENGTH_SHORT).show();return;}LinearLayout l=new LinearLayout(a);l.setOrientation(1);l.setPadding(24,16,24,16);Spinner presets=new Spinner(a);int n=0;try{if(eq!=null)n=Math.min(32,eq.getNumberOfPresets());}catch(RuntimeException ignored){}String[] names=new String[n+1];names[0]=en?"Equalizer off":"إيقاف المعادل";for(int i=0;i<n;i++)try{names[i+1]=eq.getPresetName((short)i);}catch(RuntimeException e){names[i+1]="Preset "+(i+1);}presets.setAdapter(new ArrayAdapter<>(a,android.R.layout.simple_spinner_dropdown_item,names));presets.setSelection(Math.max(0,Math.min(n,Store.settings(a).getInt("eq_preset",-1)+1)));presets.setEnabled(eq!=null&&n>0);l.addView(presets);TextView label=new TextView(a);label.setText("Bass Boost");l.addView(label);SeekBar strength=new SeekBar(a);strength.setMax(1000);strength.setProgress(Math.max(0,Math.min(1000,Store.settings(a).getInt("bass_strength",0))));strength.setEnabled(bass!=null);l.addView(strength);new AlertDialog.Builder(a).setTitle(en?"Audio effects":"مؤثرات الصوت").setView(l).setPositiveButton(en?"Apply":"تطبيق",(d,w)->{Store.settings(a).edit().putInt("eq_preset",presets.getSelectedItemPosition()-1).putInt("bass_strength",strength.getProgress()).apply();applyEq();applyBass();}).setNegativeButton(en?"Cancel":"إلغاء",null).show();}
+ void release(){if(eq!=null){try{eq.release();}catch(RuntimeException ignored){}eq=null;}if(bass!=null){try{bass.release();}catch(RuntimeException ignored){}bass=null;}}
+}

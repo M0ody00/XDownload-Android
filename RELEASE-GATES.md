@@ -15,3 +15,5 @@ Preview 2: background single-track audio is implemented as a candidate. Verify n
 Preview 3 candidate adds explicit PiP and local SRT. Verify PiP lifecycle on OPPO/Android 11, subtitle timing with real video; ASS, background queue and remaining features still open.
 
 Preview 3 follow-up: favorites and conservative separate-download renewal are implemented as candidates; seamless validator-backed replacement still open. New UI requires testing.
+
+Candidate follow-up implements direct HTTP aggregate pacing and platform audio effects; strict native torrent/media bandwidth cap and actual effect/throughput validation remain open.
