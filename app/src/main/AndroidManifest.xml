@@ -16,6 +16,7 @@
   <activity android:name=".PrivateBrowserActivity" android:process=":privatebrowser" android:exported="false"/>
   <activity android:name=".BiometricVaultActivity" android:exported="false"/>
   <activity android:name=".ToolsActivity" android:exported="false"/>
+  <activity android:name=".AudioStudioActivity" android:exported="false"/>
   <activity android:name=".ExportActivity" android:exported="false"/>
   <service android:name=".ScheduleService" android:permission="android.permission.BIND_JOB_SERVICE" android:exported="true"/>
   <service android:name=".TransferService" android:exported="false" android:foregroundServiceType="dataSync"/>
