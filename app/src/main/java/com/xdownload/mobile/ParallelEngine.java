@@ -7,6 +7,9 @@ final class ParallelEngine{
  static boolean hasCheckpoint(File target){return meta(target).isFile();}
  static void clear(File target){meta(target).delete();new File(meta(target).getPath()+".tmp").delete();for(int i=0;i<8;i++)segment(target,i).delete();}
  static long savedBytes(File target){long n=0;for(int i=0;i<8;i++)n+=segment(target,i).length();return n;}
+ static void toContiguous(File target)throws IOException{ // Discard segmented checkpoint rather than mixing unverified range layout with a sequential file.
+ clear(target);
+ }
  static long transfer(String url,boolean http,File target,HttpEngine.Observer observer,int threads)throws IOException{
   HttpEngine.Info info=HttpEngine.probe(url,http);if(!info.ranges||info.size<4*1024*1024L||info.etag.isEmpty()||info.etag.startsWith("W/")||target.length()!=0||HttpEngine.html(info.mime)||HttpEngine.manifest(info.name,info.mime)){clear(target);return HttpEngine.download(url,http,target,"","",observer,0);}
   int n=Math.max(2,Math.min(8,threads));Properties checkpoint=new Properties();boolean reuse=false;
