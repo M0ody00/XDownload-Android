@@ -1,7 +1,7 @@
 name: X Download Pro verification
 on:
   push:
-    branches: [x-download-pro]
+    branches: [x-download-pro, x-download-final-media]
   workflow_dispatch:
 concurrency:
   group: xdownload-verification-${{ github.ref }}
@@ -130,7 +130,7 @@ jobs:
             adb install -g candidate/XDownload-Pro.apk
             adb install -g candidate/test.apk
             adb shell am instrument -w com.xdownload.pro.next.test/androidx.test.runner.AndroidJUnitRunner | tee result.txt
-            grep -F 'OK (24 tests)' result.txt
+            grep -F 'OK (25 tests)' result.txt
   verified:
     needs: [build, emulator]
     runs-on: ubuntu-latest

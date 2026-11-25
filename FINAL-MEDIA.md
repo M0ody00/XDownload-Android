@@ -1,0 +1,1 @@
+Isolated RC5 group, stable branch unchanged. Opt-in remembered exact available audio/video quality labels, with storage-budget fallback. Actual selection tested. Playlist, thumbnail, metadata and subtitle embedding remain open. Exact commit must pass JVM, build and 25 instrumented tests per API29/30/35 before integration. Physical tests still required.

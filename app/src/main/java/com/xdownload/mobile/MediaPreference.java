@@ -1,0 +1,1 @@
+package com.xdownload.mobile;final class MediaPreference{static MediaEngine.Choice choose(MediaEngine.Result r,boolean audio,long budget,String label){if(label!=null&&!label.isEmpty())for(MediaEngine.Choice c:r.choices)if(c.audio==audio&&label.equals(c.label)&&(c.size<0||c.size<=budget))return c;return MediaEngine.recommend(r,audio,budget);}}
