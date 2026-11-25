@@ -1,7 +1,7 @@
 name: X Download Pro verification
 on:
   push:
-    branches: [x-download-pro, x-download-final-integration, x-download-ultimate]
+    branches: [x-download-pro, x-download-final-integration, x-download-ultimate, x-download-final-candidate]
   workflow_dispatch:
 concurrency:
   group: xdownload-verification-${{ github.ref }}
@@ -151,7 +151,7 @@ jobs:
           path: candidate
       - uses: actions/upload-artifact@v4
         with:
-          name: XDownload-Pro-Ultimate-Candidate-TESTED
+          name: XDownload-Pro-Final-Candidate-TESTED
           path: candidate/XDownload-Pro.apk
       - name: Fetch ARM64 candidate
         id: fetch_phone
@@ -169,5 +169,5 @@ jobs:
           path: phone
       - uses: actions/upload-artifact@v4
         with:
-          name: XDownload-Pro-Ultimate-Candidate-ARM64-DEVICE-TEST-REQUIRED
+          name: XDownload-Pro-Final-Candidate-ARM64-DEVICE-TEST-REQUIRED
           path: phone/
