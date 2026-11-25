@@ -37,3 +37,5 @@ RC2 candidate extends background queue, basic ASS and gestures; physical lock-sc
 RC2 adds estimated-size video conversion/batch and multi-file LAN ZIP share candidates. Actual target sizes, media compatibility, batch and LAN lifecycle require validation. Optional engine modules, widget and full localization remain open.
 
 RC2 mini-player and aggregate launcher widget candidates added; widget host rendering, background queue transitions and real video output sizes remain device verification tasks. Optional downloadable engine modules and full localization not completed.
+
+RC2 runtime engine switches and partial localization added. Full localization, independently downloadable modules and controlled physical measurements against competitors remain open. Device script records startup/PSS and battery/thermal context only.
