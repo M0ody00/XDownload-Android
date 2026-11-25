@@ -17,6 +17,7 @@
   <activity android:name=".LanShareActivity" android:exported="false"/>
   <activity android:name=".PrivateBrowserActivity" android:process=":privatebrowser" android:exported="false"/>
   <activity android:name=".BiometricVaultActivity" android:exported="false"/>
+  <activity android:name=".BatchVideoActivity" android:exported="false"/>
   <activity android:name=".VideoImageActivity" android:exported="false"/>
   <activity android:name=".LocalPlayerActivity" android:exported="false" android:supportsPictureInPicture="true" android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"/>
   <activity android:name=".SettingsBackupActivity" android:exported="false"/>

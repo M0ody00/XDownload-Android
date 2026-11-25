@@ -33,3 +33,5 @@ RC1 optional screen-lock candidate uses Android device credentials and a private
 RC1 adds MediaStore recycle/restore candidate and test gate (21 Android tests per emulator). Custom SAF trash not implemented; Android may expire trashed files. App lock timeout check also covers pre-start shared intents.
 
 RC2 candidate extends background queue, basic ASS and gestures; physical lock-screen/PiP/gesture/codec compatibility and ASS styling remain to verify. No new decoder is claimed.
+
+RC2 adds estimated-size video conversion/batch and multi-file LAN ZIP share candidates. Actual target sizes, media compatibility, batch and LAN lifecycle require validation. Optional engine modules, widget and full localization remain open.
