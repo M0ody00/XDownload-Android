@@ -1,0 +1,4 @@
+package com.xdownload.mobile;
+import android.app.PendingIntent;import android.content.Intent;import android.os.Build;import android.service.quicksettings.Tile;import android.service.quicksettings.TileService;
+/** Explicit tap only; clipboard is read by the focused quick panel. */
+public final class QuickTileService extends TileService{@Override public void onStartListening(){super.onStartListening();Tile t=getQsTile();if(t!=null){t.setState(Tile.STATE_INACTIVE);t.setLabel("X Download");t.updateTile();}}@Override public void onClick(){super.onClick();if(isLocked()){unlockAndRun(this::open);return;}open();}void open(){Intent i=new Intent(this,QuickDownloadActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);try{if(Build.VERSION.SDK_INT>=34)startActivityAndCollapse(PendingIntent.getActivity(this,90436,i,PendingIntent.FLAG_IMMUTABLE|PendingIntent.FLAG_UPDATE_CURRENT));else startActivityAndCollapse(i);}catch(RuntimeException ignored){}}}
