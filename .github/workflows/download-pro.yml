@@ -1,7 +1,7 @@
 name: X Download Pro verification
 on:
   push:
-    branches: [x-download-pro, x-download-final-integration, x-download-ultimate, x-download-final-candidate]
+    branches: [x-download-pro, x-download-final-integration, x-download-ultimate, x-download-final-candidate, x-download-capture-shield]
   workflow_dispatch:
 concurrency:
   group: xdownload-verification-${{ github.ref }}
@@ -130,7 +130,7 @@ jobs:
             adb install -g candidate/XDownload-Pro.apk
             adb install -g candidate/test.apk
             adb shell am instrument -w com.xdownload.pro.next.test/androidx.test.runner.AndroidJUnitRunner | tee result.txt
-            grep -F 'OK (30 tests)' result.txt
+            grep -F 'OK (33 tests)' result.txt
   verified:
     needs: [build, emulator]
     runs-on: ubuntu-latest
@@ -151,7 +151,7 @@ jobs:
           path: candidate
       - uses: actions/upload-artifact@v4
         with:
-          name: XDownload-Pro-Unified-TESTED
+          name: XDownload-Pro-Capture-Shield-TESTED
           path: candidate/XDownload-Pro.apk
       - name: Fetch ARM64 candidate
         id: fetch_phone
@@ -169,5 +169,5 @@ jobs:
           path: phone
       - uses: actions/upload-artifact@v4
         with:
-          name: XDownload-Pro-Unified-ARM64-DEVICE-TEST-REQUIRED
+          name: XDownload-Pro-Capture-Shield-ARM64-DEVICE-TEST-REQUIRED
           path: phone/
