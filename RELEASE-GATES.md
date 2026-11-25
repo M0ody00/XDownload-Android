@@ -31,3 +31,5 @@ RC1 now requires stored RAR4 byte-exact extraction and RAR traversal rejection i
 RC1 optional screen-lock candidate uses Android device credentials and a private marker across app processes, after 30 seconds away or new process; FLAG_SECURE, authenticated enable/disable, PiP disabled while lock enabled. Not encryption of shared downloads or protection of notification controls. Device credential prompts, cross-process re-entry and external picker lifecycle require physical testing.
 
 RC1 adds MediaStore recycle/restore candidate and test gate (21 Android tests per emulator). Custom SAF trash not implemented; Android may expire trashed files. App lock timeout check also covers pre-start shared intents.
+
+RC2 candidate extends background queue, basic ASS and gestures; physical lock-screen/PiP/gesture/codec compatibility and ASS styling remain to verify. No new decoder is claimed.
