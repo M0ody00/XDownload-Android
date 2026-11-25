@@ -48,9 +48,14 @@ public final class TransferService extends Service {
  private String diagnostic(Exception e){String msg=String.valueOf(e.getMessage());if(msg.contains("HTTP 403")||msg.contains("HTTP 410"))return "Source rejected or link expired. Open the authorized source again for a fresh link.";if(msg.contains("HTTP 429"))return "Server rate limit. Retry later or reduce connections.";if(msg.contains("Storage")||msg.contains("storage"))return "Insufficient storage. Free space and resume.";return msg.equals("null")?"Transfer failed":msg;}
  private void publish(Store.Job j,File file,long result)throws Exception{
    j.sha=HttpEngine.sha256(file);if(!j.expected.isEmpty()&&!j.sha.equalsIgnoreCase(j.expected)){file.delete();j.done=0;j.etag="";j.modified="";throw new IOException("SHA-256 mismatch; invalid temporary file removed");}
+   String tree=Store.settings(this).getString("download_tree","");Uri uri;
+   if(!tree.isEmpty())uri=DownloadDestination.publish(this,Uri.parse(tree),j,file);
+   else{
    if(file.length()+4*1024*1024L>getFilesDir().getUsableSpace())throw new IOException("Need additional storage to publish completed file");
-   ContentValues values=new ContentValues();values.put(MediaStore.MediaColumns.DISPLAY_NAME,j.name);values.put(MediaStore.MediaColumns.MIME_TYPE,j.mime);values.put(MediaStore.MediaColumns.RELATIVE_PATH,Environment.DIRECTORY_DOWNLOADS+"/XDownloadPro/"+HttpEngine.category(j.name,j.mime));values.put(MediaStore.MediaColumns.IS_PENDING,1);Uri uri=getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI,values);if(uri==null)throw new IOException("Cannot create output file");
+   ContentValues values=new ContentValues();values.put(MediaStore.MediaColumns.DISPLAY_NAME,j.name);values.put(MediaStore.MediaColumns.MIME_TYPE,j.mime);values.put(MediaStore.MediaColumns.RELATIVE_PATH,Environment.DIRECTORY_DOWNLOADS+"/XDownloadPro/"+HttpEngine.category(j.name,j.mime));values.put(MediaStore.MediaColumns.IS_PENDING,1);uri=getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI,values);if(uri==null)throw new IOException("Cannot create output file");
    try{try(InputStream in=new FileInputStream(file);OutputStream out=getContentResolver().openOutputStream(uri,"w")){if(out==null)throw new IOException("Cannot write output");byte[] buf=new byte[65536];int n;while((n=in.read(buf))!=-1)out.write(buf,0,n);}ContentValues done=new ContentValues();done.put(MediaStore.MediaColumns.IS_PENDING,0);if(getContentResolver().update(uri,done,null,null)!=1)throw new IOException("Cannot publish output");}catch(Exception e){getContentResolver().delete(uri,null,null);throw e;}
+   }
+   j.name=DownloadDestination.name(this,uri,j.name);
    synchronized(store){j.uri=uri.toString();j.done=result;j.total=result;j.state="complete";j.error="";j.speed=0;store.save();}file.delete();completed(j);
  }
  private PendingIntent action(String a,String id,int code){return PendingIntent.getService(this,code,new Intent(this,TransferService.class).setAction(a).setData(Uri.parse("xdownload://job/"+id+"/"+a)).putExtra("id",id),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);}

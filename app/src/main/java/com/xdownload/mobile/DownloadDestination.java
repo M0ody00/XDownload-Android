@@ -1,0 +1,17 @@
+package com.xdownload.mobile;
+import android.content.*;
+import android.database.Cursor;
+import android.net.Uri;
+import android.provider.*;
+import java.io.*;
+/** User-selected storage via Android's Storage Access Framework; no broad filesystem permission. */
+final class DownloadDestination{
+ static void select(Context c,Intent data)throws IOException{Uri uri=data.getData();if(uri==null||!DocumentsContract.isTreeUri(uri))throw new IOException("Not a document tree");int flags=data.getFlags()&(Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_GRANT_WRITE_URI_PERMISSION);if(flags!=(Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_GRANT_WRITE_URI_PERMISSION))throw new IOException("Read/write access required");c.getContentResolver().takePersistableUriPermission(uri,flags);if(!granted(c,uri))throw new IOException("Persistent access unavailable");Store.settings(c).edit().putString("download_tree",uri.toString()).apply();}
+ static boolean granted(Context c,Uri tree){for(UriPermission p:c.getContentResolver().getPersistedUriPermissions())if(tree.equals(p.getUri())&&p.isReadPermission()&&p.isWritePermission())return true;return false;}
+ static Uri root(Uri tree){return DocumentsContract.buildDocumentUriUsingTree(tree,DocumentsContract.getTreeDocumentId(tree));}
+ static String name(Context c,Uri doc,String fallback){try(Cursor q=c.getContentResolver().query(doc,new String[]{OpenableColumns.DISPLAY_NAME},null,null,null)){if(q!=null&&q.moveToFirst()){String value=q.getString(0);if(value!=null&&!value.isEmpty())return value;}}catch(Exception ignored){}return fallback;}
+ static String label(Context c,Uri tree){try{return name(c,root(tree),"Selected folder");}catch(RuntimeException e){return "Unavailable folder";}}
+ static Uri publish(Context c,Uri tree,Store.Job job,File file)throws Exception{if(!granted(c,tree))throw new IOException("Download folder permission revoked. Select a folder again or restore Downloads.");Uri uri=null;boolean ok=false;try{uri=DocumentsContract.createDocument(c.getContentResolver(),root(tree),job.mime,HttpEngine.safeName(job.name));if(uri==null)throw new IOException("Cannot create document in download folder");long written=0;try(InputStream in=new FileInputStream(file);OutputStream out=c.getContentResolver().openOutputStream(uri,"w")){if(out==null)throw new IOException("Cannot open output document");byte[] buf=new byte[65536];int n;while((n=in.read(buf))!=-1){if(Thread.currentThread().isInterrupted())throw new IOException("Cancelled");out.write(buf,0,n);written+=n;}out.flush();}if(written!=file.length())throw new IOException("Incomplete output");ok=true;return uri;}finally{if(!ok&&uri!=null)try{DocumentsContract.deleteDocument(c.getContentResolver(),uri);}catch(Exception ignored){}}}
+ static Uri rename(Context c,Uri uri,String name)throws Exception{if(DocumentsContract.isDocumentUri(c,uri)){Uri renamed=DocumentsContract.renameDocument(c.getContentResolver(),uri,name);if(renamed==null)throw new IOException("Rename unsupported");return renamed;}ContentValues v=new ContentValues();v.put(MediaStore.MediaColumns.DISPLAY_NAME,name);if(c.getContentResolver().update(uri,v,null,null)!=1)throw new IOException("Rename failed");return uri;}
+ static void delete(Context c,Uri uri)throws Exception{if(DocumentsContract.isDocumentUri(c,uri)){if(!DocumentsContract.deleteDocument(c.getContentResolver(),uri))throw new IOException("Delete unsupported");}else if(c.getContentResolver().delete(uri,null,null)!=1)throw new IOException("Delete failed");}
+}
