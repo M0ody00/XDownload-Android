@@ -1,0 +1,1 @@
+Isolated RC5 group, stable branch unchanged. Local subtitle offset and actual Android MediaPlayer audio track selection, guarded when device codec does not support selection. Timing unit test. Audio sync, aspect ratio, lock and shuffle remain open. Exact commit must pass JVM, build and 24 instrumented tests per API29/30/35 before integration. Physical tests still required.

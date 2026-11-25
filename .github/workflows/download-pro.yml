@@ -1,7 +1,7 @@
 name: X Download Pro verification
 on:
   push:
-    branches: [x-download-pro]
+    branches: [x-download-pro, x-download-final-player]
   workflow_dispatch:
 concurrency:
   group: xdownload-verification-${{ github.ref }}
