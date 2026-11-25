@@ -55,6 +55,21 @@ jobs:
           unzip -Z1 phone/XDownload-Pro-ARM64.apk | grep -Fx lib/arm64-v8a/libpython.so
           unzip -Z1 phone/XDownload-Pro-ARM64.apk | grep -Fx lib/arm64-v8a/libffmpeg.so
           unzip -Z1 phone/XDownload-Pro-ARM64.apk | grep -Fx lib/arm64-v8a/libaria2c.so
+      - name: Measure ARM64 APK and enforce native deduplication
+        run: |
+          python3 - <<'PY'
+          import pathlib, zipfile
+          p = pathlib.Path('phone/XDownload-Pro-ARM64.apk')
+          with zipfile.ZipFile(p) as z:
+              entries = z.infolist()
+              assert not any('libffmpegkit' in x.filename for x in entries), 'duplicate FFmpegKit remains'
+              lines = ['ARM64 APK bytes: '+str(p.stat().st_size), 'Baseline bytes: 84147551', 'Savings bytes: '+str(84147551-p.stat().st_size)]
+              lines += [str(x.compress_size)+' '+x.filename for x in sorted(entries,key=lambda x:x.compress_size,reverse=True)[:30]]
+              report = '\n'.join(lines)
+              print(report)
+              pathlib.Path('phone/SIZE-REPORT.txt').write_text(report+'\n')
+              assert p.stat().st_size < 84147551, 'APK size regression'
+          PY
       - uses: actions/upload-artifact@v4
         with:
           name: phone-candidate
@@ -101,7 +116,7 @@ jobs:
           path: candidate
       - uses: actions/upload-artifact@v4
         with:
-          name: XDownload-Pro-2.5-RC1-TESTED
+          name: XDownload-Pro-2.5-RC2-TESTED
           path: candidate/XDownload-Pro.apk
       - uses: actions/download-artifact@v4
         with:
@@ -109,5 +124,5 @@ jobs:
           path: phone
       - uses: actions/upload-artifact@v4
         with:
-          name: XDownload-Pro-2.5-RC1-ARM64-DEVICE-TEST-REQUIRED
-          path: phone/XDownload-Pro-ARM64.apk
+          name: XDownload-Pro-2.5-RC2-ARM64-DEVICE-TEST-REQUIRED
+          path: phone/

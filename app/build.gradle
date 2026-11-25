@@ -7,8 +7,8 @@ android {
   minSdk 29
   if (project.hasProperty('phoneAbi')) { ndk { abiFilters project.property('phoneAbi').toString() } }
   targetSdk 34
-  versionCode 10
-  versionName '2.5-rc1'
+  versionCode 11
+  versionName '2.5-rc2'
   testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
  }
  packaging { jniLibs { useLegacyPackaging = true; pickFirsts += ['**/libc++_shared.so'] } }
@@ -23,8 +23,6 @@ dependencies {
  implementation 'io.github.junkfood02.youtubedl-android:ffmpeg:0.18.1'
  implementation 'io.github.junkfood02.youtubedl-android:aria2c:0.18.1'
  implementation 'androidx.media3:media3-transformer:1.5.1'
- implementation 'dev.ffmpegkit-maintained:ffmpeg-kit-audio:8.1.7'
- implementation 'com.arthenica:smart-exception-java:0.2.1'
  testImplementation 'junit:junit:4.13.2'
  androidTestImplementation 'androidx.test:runner:1.6.2'
  androidTestImplementation 'androidx.test.ext:junit:1.2.1'
