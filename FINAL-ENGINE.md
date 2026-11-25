@@ -1,0 +1,1 @@
+Isolated RC5 group, stable branch unchanged. Battery threshold with charging exception and metered network cap for direct transfers at dispatch. Existing resume/pause all retained. SFTP, per-job profiles and import/export remain open. Exact commit must pass JVM, build and 24 instrumented tests per API29/30/35 before integration. Physical tests still required.

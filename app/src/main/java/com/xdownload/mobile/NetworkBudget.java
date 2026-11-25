@@ -1,0 +1,2 @@
+package com.xdownload.mobile;
+final class NetworkBudget{static boolean batteryAllowed(int threshold,int level,boolean charging){return charging||threshold<=0||level<0||level>100||level>=Math.min(100,threshold);}static long rate(long base,boolean metered,int cap){long limit=metered?Math.max(0,Math.min(102400,cap))*1024L:0;return base<=0?limit:limit<=0?base:Math.min(base,limit);}}
