@@ -16,7 +16,7 @@ public final class LocalPlayerActivity extends SecureActivity {
     VideoView video;
     SeekBar seek;
     TextView title, status, time, position, subtitle;LinearLayout playerRoot;FrameLayout mediaScreen;Button pipButton,subtitleButton;boolean pipRequested=false;java.util.List<SrtTrack.Cue> cues=Collections.emptyList();String cueJob="";
-    Button play, repeat, speedButton, timerButton, backgroundButton;ImageView playIcon;LinearLayout playerChrome,playerControls;boolean cinema=false,controlsLocked=false,shuffle=false;int subtitleDelayMs=0,aspect=0;ImageView unlockIcon;final Runnable hideControls=()->{if(ready&&wantPlay&&!controlsLocked&&!dragging&&!queue.isEmpty()&&isVideo(queue.get(index))&&!isInPictureInPictureMode())setChrome(false);};
+    Button play, repeat, speedButton, timerButton, backgroundButton;ImageView playIcon;LinearLayout playerChrome,playerControls;boolean cinema=false,controlsLocked=false,shuffle=false;int subtitleDelayMs=0,aspect=0;ImageView unlockIcon;final Runnable hideControls=this::autoHideControls;
     MediaPlayer preparedPlayer;final AudioEffects effects=new AudioEffects();float playbackSpeed=1f;long sleepDeadline=0;
     AudioManager audio;
     AudioFocusRequest focus;
@@ -94,6 +94,7 @@ public final class LocalPlayerActivity extends SecureActivity {
     }
     void togglePlayback(){if(wantPlay||(ready&&video.isPlaying()))pausePlayback();else startPlayback();}
     void setChrome(boolean show){if(playerChrome==null||playerControls==null)return;cinema=!show;boolean actual=show&&!controlsLocked&&!isInPictureInPictureMode();playerChrome.setVisibility(actual?View.VISIBLE:View.GONE);playerControls.setVisibility(actual?View.VISIBLE:View.GONE);if(unlockIcon!=null)unlockIcon.setVisibility(controlsLocked&&!isInPictureInPictureMode()?View.VISIBLE:View.GONE);if(subtitle!=null){FrameLayout.LayoutParams lp=(FrameLayout.LayoutParams)subtitle.getLayoutParams();int margin=actual?dp(180):dp(18);if(lp.bottomMargin!=margin){lp.bottomMargin=margin;subtitle.setLayoutParams(lp);}}getWindow().getDecorView().setSystemUiVisibility((!actual&&!isInPictureInPictureMode())?View.SYSTEM_UI_FLAG_FULLSCREEN|View.SYSTEM_UI_FLAG_HIDE_NAVIGATION|View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY:0);}
+    void autoHideControls(){if(ready&&wantPlay&&!controlsLocked&&!dragging&&!queue.isEmpty()&&isVideo(queue.get(index))&&!isInPictureInPictureMode())setChrome(false);}
     void showChrome(){handler.removeCallbacks(hideControls);setChrome(true);if(wantPlay)handler.postDelayed(hideControls,3500);}
     void toggleCinema(){if(isInPictureInPictureMode()||controlsLocked)return;handler.removeCallbacks(hideControls);if(cinema)showChrome();else setChrome(false);}
     @Override public void onBackPressed(){if(controlsLocked){controlsLocked=false;showChrome();return;}if(cinema){showChrome();return;}super.onBackPressed();}
