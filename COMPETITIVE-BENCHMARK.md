@@ -1,0 +1,8 @@
+# Competitive verification protocol — X Download Pro 4.0
+Status: engineering test plan, no comparative measurement yet.
+Reference applications: 1DM, ADM, Seal, VLC, ZArchiver. Record exact app version, Android release, device model, free storage, battery level and network.
+Use controlled authorized HTTP fixture with strong ETag and valid ranges, 16 MiB, 128 MiB and 512 MiB. Compare 1, 8, 16 and 32 where supported; measure elapsed time, payload goodput, integrity SHA-256, pause/resume retained bytes, retry after connection loss, storage use. Repeat each app/config 5 times with alternating order; report median and range. Separate Wi-Fi and metered network trials. Record actual network throughput and thermal state; no speed claims from connection counts.
+On OPPO F11 Android 11: cold startup (adb am start -W), memory PSS (dumpsys meminfo), battery/thermal (dumpsys battery and thermalservice), app installed size, 1-hour playback/download observation. Repeat with battery saver, screen off, reboot, permission loss and SD card removal. Record crashes/ANRs, recoverability and hash integrity.
+Media: same authorized MP4, MKV, WAV, MP3, FLAC, SRT and output conversion fixtures. Check codec, subtitle timing, background/lock screen controls, PiP, conversion output, and unexpected behavior.
+Archive: ZIP, 7z, RAR4/RAR5 stored and compressed fixtures, nested paths and hostile traversal; record compatibility, extraction integrity, memory and failure behavior. Never test untrusted archives on a user's device.
+Publication: owner-signed release with immutable key fingerprint, license/privacy review, and physical results. Do not claim #1 unless measured against defined criteria and scope. 

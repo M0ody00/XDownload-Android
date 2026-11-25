@@ -94,8 +94,20 @@ import android.content.*;import android.net.Uri;import androidx.test.core.app.Ac
    byte[] payload=new byte[32768];new java.util.Random(41).nextBytes(payload);File input=new File(dir,"payload.bin"),archive=new File(dir,"sample.7z");java.nio.file.Files.write(input.toPath(),payload);
    try(org.apache.commons.compress.archivers.sevenz.SevenZOutputFile z=new org.apache.commons.compress.archivers.sevenz.SevenZOutputFile(archive)){z.putArchiveEntry(z.createArchiveEntry(input,"folder/payload.bin"));z.write(payload);z.closeArchiveEntry();}
    File extracted=new File(dir,"extracted");assertEquals(1,ArchiveTools.extract(archive,extracted));assertArrayEquals(payload,java.nio.file.Files.readAllBytes(new File(extracted,"folder/payload.bin").toPath()));
+   File rar=new File(dir,"sample.rar");writeStoredRar(rar,"payload.bin",payload);File rarOut=new File(dir,"rar-out");assertEquals(1,ArchiveTools.extract(rar,rarOut));assertArrayEquals(payload,java.nio.file.Files.readAllBytes(new File(rarOut,"payload.bin").toPath()));
+   File badRar=new File(dir,"bad.rar");writeStoredRar(badRar,"../escape",payload);try{ArchiveTools.extract(badRar,new File(dir,"bad-rar-out"));fail("RAR traversal must be rejected");}catch(IOException expected){assertFalse(new File(dir,"escape").exists());}
    File bad=new File(dir,"bad.7z");try(org.apache.commons.compress.archivers.sevenz.SevenZOutputFile z=new org.apache.commons.compress.archivers.sevenz.SevenZOutputFile(bad)){z.putArchiveEntry(z.createArchiveEntry(input,"../escape"));z.write(payload);z.closeArchiveEntry();}
    try{ArchiveTools.extract(bad,new File(dir,"bad-out"));fail("Traversal must be rejected");}catch(IOException expected){assertFalse(new File(dir,"escape").exists());}
   }finally{FileTools.deleteTree(dir);}
  }
+
+ static void little(ByteArrayOutputStream out,long n,int bytes){for(int i=0;i<bytes;i++)out.write((int)(n>>>(8*i))&255);}
+ static void rarHeader(OutputStream out,byte[] body)throws IOException{java.util.zip.CRC32 crc=new java.util.zip.CRC32();crc.update(body);int v=(int)crc.getValue();out.write(v&255);out.write((v>>>8)&255);out.write(body);}
+ /** Synthetic RAR4 store-method fixture; no third-party copyrighted payload. */
+ static void writeStoredRar(File file,String name,byte[] data)throws IOException{byte[] filename=name.getBytes(java.nio.charset.StandardCharsets.US_ASCII);java.util.zip.CRC32 content=new java.util.zip.CRC32();content.update(data);try(OutputStream out=new FileOutputStream(file)){
+  out.write(new byte[]{0x52,0x61,0x72,0x21,0x1a,0x07,0});
+  ByteArrayOutputStream main=new ByteArrayOutputStream();main.write(0x73);little(main,0,2);little(main,13,2);little(main,0,2);little(main,0,4);rarHeader(out,main.toByteArray());
+  ByteArrayOutputStream header=new ByteArrayOutputStream();header.write(0x74);little(header,0x8000,2);little(header,32+filename.length,2);little(header,data.length,4);little(header,data.length,4);header.write(2);little(header,content.getValue(),4);little(header,0,4);header.write(20);header.write(0x30);little(header,filename.length,2);little(header,0x20,4);header.write(filename);rarHeader(out,header.toByteArray());out.write(data);
+  ByteArrayOutputStream end=new ByteArrayOutputStream();end.write(0x7b);little(end,0,2);little(end,7,2);rarHeader(out,end.toByteArray());
+ }}
 }

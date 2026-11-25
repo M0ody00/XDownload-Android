@@ -25,3 +25,5 @@ Preview 4 follow-up adds encrypted settings backup only (not file/history backup
 Candidate adds selected storage-tree output, with Android/provider restrictions; device and removable-storage testing remains open.
 
 RC1 adds bounded 7z/RAR candidate; 20-test gate includes real 7z extraction. RAR fixture testing, full license/security audit and physical benchmarks remain mandatory. A release candidate is not an approved Final Edition.
+
+RC1 now requires stored RAR4 byte-exact extraction and RAR traversal rejection in addition to 7z, and direct-engine 16/32-range byte-exact JVM regression. Actual RAR5 compressed/solid variants, sustained throughput and real-device performance remain open.
