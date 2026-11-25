@@ -6,7 +6,7 @@ import java.util.regex.*;
 import java.security.MessageDigest;
 
 final class HttpEngine {
- interface Observer { default boolean throttle(int bytes)throws IOException{return proceed();} boolean proceed(); void progress(long bytes,long total,String etag,String modified)throws IOException; }
+ interface Observer { default void segments(int[] coverage){} default boolean throttle(int bytes)throws IOException{return proceed();} boolean proceed(); void progress(long bytes,long total,String etag,String modified)throws IOException; }
  static final class Info { final String name,mime,etag,modified;final long size;final boolean ranges;
   Info(String name,String mime,long size,String etag,String modified,boolean ranges){this.name=name;this.mime=mime;this.size=size;this.etag=etag;this.modified=modified;this.ranges=ranges;} }
  static URL validated(String value,boolean http)throws IOException{try{URL u=new URL(value.trim());String protocol=u.getProtocol();if(!("https".equalsIgnoreCase(protocol)||http&&"http".equalsIgnoreCase(protocol))||u.getHost().isEmpty()||u.getUserInfo()!=null)throw new IOException("Use an authorized HTTPS download link");return u;}catch(IllegalArgumentException e){throw new IOException("Invalid URL");}}

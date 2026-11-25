@@ -49,3 +49,5 @@ RC3 UI regression added: valid shared URL displays without auto-starting downloa
 X8 dynamic range candidate requires exact-byte, pause/resume, split partition and invalid-range JVM regressions plus physical throughput/energy tests. 8x is a conditional target, not a measured result.
 
 RC4 X8 interface and browser integration candidates: optional one-click within built-in browser, external MIME-aware chooser, mode/appearance backup and main RTL. Verify physical external browser behavior, layout at 125% text, and one-click duplicate/permission behavior. FTP/FTPS/SFTP/QUIC, optional independently installed engines, full localization and signed release remain open.
+
+RC4 adds real concurrent slow-tail test and byte-coverage UI; verify actual Android rendering and device throughput/energy before any X8 claim.
