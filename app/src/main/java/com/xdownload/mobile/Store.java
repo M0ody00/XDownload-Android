@@ -18,6 +18,7 @@ final class Store {
  synchronized Job getJob(String id){for(Job j:jobs)if(j.id.equals(id))return j;return null;}
  synchronized boolean duplicate(String url){for(Job j:jobs)if(j.url.equals(url)&&!j.state.equals("cancelled"))return true;return false;}
  synchronized void add(Job j){jobs.add(j);save();}
+ synchronized void remove(Job j){jobs.remove(j);save();}
  synchronized void save(){try{JSONArray a=new JSONArray();for(Job j:jobs)a.put(j.json());prefs.edit().putString("jobs",a.toString()).apply();}catch(JSONException ignored){}}
  synchronized Job next(){for(Job j:jobs)if(j.state.equals("queued")){j.state="running";j.error="";save();return j;}return null;}
  static SharedPreferences settings(Context c){return c.getSharedPreferences("settings",0);}
