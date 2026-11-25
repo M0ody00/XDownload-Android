@@ -13,3 +13,5 @@ Baseline: 4.0 Preview 1, verified run 45563190176 (18 instrumentation tests on e
 Preview 2: background single-track audio is implemented as a candidate. Verify new same-commit run; full queue/controls and physical lock-screen/audio focus behavior remain open.
 
 Preview 3 candidate adds explicit PiP and local SRT. Verify PiP lifecycle on OPPO/Android 11, subtitle timing with real video; ASS, background queue and remaining features still open.
+
+Preview 3 follow-up: favorites and conservative separate-download renewal are implemented as candidates; seamless validator-backed replacement still open. New UI requires testing.

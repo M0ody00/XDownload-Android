@@ -43,7 +43,7 @@ import android.content.*;import android.net.Uri;import androidx.test.core.app.Ac
   try{
    try(InputStream in=InstrumentationRegistry.getInstrumentation().getContext().getAssets().open("sample.wav");OutputStream out=c.getContentResolver().openOutputStream(uri,"w")){AudioStudioActivity.copy(in,out);}
    ContentValues done=new ContentValues();done.put(android.provider.MediaStore.MediaColumns.IS_PENDING,0);assertEquals(1,c.getContentResolver().update(uri,done,null,null));
-   job.uri=uri.toString();job.state="complete";Store.get(c).add(job);assertTrue(LocalPlayerActivity.playable(job));
+   job.uri=uri.toString();job.state="complete";Store.get(c).add(job);assertTrue(LocalPlayerActivity.playable(job));job.favorite=true;assertTrue(new Store.Job(job.json()).favorite);assertFalse(MainActivity.canRenew(job));
    Intent intent=new Intent(c,LocalPlayerActivity.class).putExtra("job_id",job.id);
    try(ActivityScenario<LocalPlayerActivity> scenario=ActivityScenario.launch(intent)){
     AtomicBoolean prepared=new AtomicBoolean(false),playing=new AtomicBoolean(false);
