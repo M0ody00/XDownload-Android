@@ -45,3 +45,5 @@ RC2 adds compatibility conversion entry point and device decoder report, Arabic 
 RC3 introduces consent-based floating shortcut and foreground clipboard suggestion (not automatic clipboard read over unrelated apps), plus API29 emulator and rate-limit-only build retries. Verify on actual OPPO F11 and Huawei nova 7 (Android/EMUI variant), including overlay permission, focus, share, revoke/stop and lock-screen behavior. Final release remains blocked until exact commit tests and owner signing/device validation.
 
 RC3 UI regression added: valid shared URL displays without auto-starting download; credential-bearing URL rejected. 22-test gate on API29/30/35. No claim of universal auto-popup or physical phone compatibility yet.
+
+X8 dynamic range candidate requires exact-byte, pause/resume, split partition and invalid-range JVM regressions plus physical throughput/energy tests. 8x is a conditional target, not a measured result.
