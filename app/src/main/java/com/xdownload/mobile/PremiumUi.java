@@ -18,7 +18,7 @@ final class PremiumUi{
  final String kind;final int color;final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);Glyph(String k,int c){kind=k;color=c;}
  void line(Canvas c,float x,float y,float X,float Y){c.drawLine(x,y,X,Y,p);}
  void path(Canvas c,float... xy){Path a=new Path();a.moveTo(xy[0],xy[1]);for(int i=2;i<xy.length;i+=2)a.lineTo(xy[i],xy[i+1]);c.drawPath(a,p);}
- public void draw(Canvas c){c.save();Rect b=getBounds();c.translate(b.left,b.top);c.scale(b.width()/24f,b.height()/24f);p.setColor(color);p.setStrokeWidth(1.8f);p.setStrokeCap(Paint.Cap.ROUND);p.setStrokeJoin(Paint.Join.ROUND);p.setStyle(Paint.Style.STROKE);
+ public void draw(Canvas c){c.save();Rect b=getBounds();float scale=Math.min(b.width(),b.height())/24f;c.translate(b.left+(b.width()-24*scale)/2f,b.top+(b.height()-24*scale)/2f);c.scale(scale,scale);p.setColor(color);p.setStrokeWidth(1.8f);p.setStrokeCap(Paint.Cap.ROUND);p.setStrokeJoin(Paint.Join.ROUND);p.setStyle(Paint.Style.STROKE);
  switch(kind){
  case "home":path(c,2,11,12,2,22,11);path(c,5,10,5,22,10,22,10,15,14,15,14,22,19,22,19,10);break;
  case "globe":c.drawCircle(12,12,10,p);c.drawOval(7,2,17,22,p);line(c,2,12,22,12);break;
@@ -57,6 +57,7 @@ final class PremiumUi{
  case "equalizer":for(int x=5;x<=19;x+=7)line(c,x,3,x,21);c.drawCircle(5,9,2,p);c.drawCircle(12,15,2,p);c.drawCircle(19,7,2,p);break;
  default:c.drawCircle(12,12,9,p);break;
  }c.restore();}
+ @Override public int getIntrinsicWidth(){return 24;}@Override public int getIntrinsicHeight(){return 24;}
  public void setAlpha(int a){p.setAlpha(a);}public void setColorFilter(ColorFilter f){p.setColorFilter(f);}public int getOpacity(){return PixelFormat.TRANSLUCENT;}
  }
 }
