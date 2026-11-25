@@ -1,0 +1,18 @@
+package com.xdownload.mobile;
+import android.app.*;
+import android.content.*;
+import android.os.*;
+import android.view.*;
+import android.widget.*;
+/** Explicit share or user-tapped floating shortcut; clipboard read only while this activity has focus. */
+public final class QuickDownloadActivity extends SecureActivity{
+ EditText url;TextView hint;Button download;boolean filled=false,shared=false,closed=false;String initial="";
+ String tr(String ar,String en){return lockText(ar,en);}
+ int dp(int n){return Math.round(n*getResources().getDisplayMetrics().density);}
+ @Override protected void onCreate(Bundle b){super.onCreate(b);getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);if(Intent.ACTION_SEND.equals(getIntent().getAction())){shared=true;initial=QuickLink.parse(getIntent().getCharSequenceExtra(Intent.EXTRA_TEXT),Store.settings(this).getBoolean("http",false));}LinearLayout l=new LinearLayout(this);l.setOrientation(1);l.setPadding(dp(18),dp(14),dp(18),dp(12));l.setBackgroundColor(0xff182332);l.setFocusableInTouchMode(true);TextView brand=new TextView(this);brand.setText("X DOWNLOAD PRO");brand.setTextColor(0xff78b8ff);brand.setTextSize(20);l.addView(brand);hint=new TextView(this);hint.setTextColor(0xffe6edf6);hint.setText(tr("رابط التحميل السريع","Quick download link"));l.addView(hint);url=new EditText(this);url.setTextColor(0xfff2f5fb);url.setHintTextColor(0xffa1b0c4);url.setHint("https://…");url.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_VARIATION_URI);url.setSingleLine(true);l.addView(url,new LinearLayout.LayoutParams(-1,dp(52)));if(shared){url.setText(initial);filled=true;}LinearLayout row=new LinearLayout(this);Button paste=new Button(this);paste.setText(tr("لصق","Paste"));paste.setOnClickListener(v->paste());row.addView(paste,new LinearLayout.LayoutParams(0,dp(48),1));download=new Button(this);download.setText(tr("تحليل وتنزيل","Analyze"));download.setOnClickListener(v->submit());row.addView(download,new LinearLayout.LayoutParams(0,dp(48),1));l.addView(row);Button cancel=new Button(this);cancel.setText(tr("إغلاق","Close"));cancel.setOnClickListener(v->finish());l.addView(cancel);setContentView(l);l.requestFocus();getWindow().setLayout(Math.min(getResources().getDisplayMetrics().widthPixels-dp(24),dp(380)),-2);}
+ void paste(){if(!screenAccessAllowed()||!hasWindowFocus()||closed)return;String value=QuickLink.read(this,Store.settings(this).getBoolean("http",false));if(value.isEmpty()){hint.setText(tr("لا يوجد رابط نصي مسموح. الصقه يدويًا أو استخدم المشاركة.","No supported text link. Paste manually or use Share."));return;}url.setText(value);hint.setText(tr("المصدر: ","Host: ")+QuickLink.host(value));}
+ @Override public void onWindowFocusChanged(boolean focus){super.onWindowFocusChanged(focus);if(focus&&!filled&&url!=null&&screenAccessAllowed()){filled=true;paste();}}
+ @Override protected void onScreenUnlocked(){if(!filled&&hasWindowFocus()){filled=true;paste();}}
+ void submit(){if(!screenAccessAllowed())return;String value=QuickLink.parse(url.getText(),Store.settings(this).getBoolean("http",false));if(value.isEmpty()){hint.setText(tr("أدخل رابط HTTPS صحيحًا","Enter a valid HTTPS link"));return;}startActivity(new Intent(this,MainActivity.class).setAction(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT,value).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP));finish();}
+ @Override protected void onDestroy(){closed=true;initial="";super.onDestroy();}
+}

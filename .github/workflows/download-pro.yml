@@ -3,6 +3,9 @@ on:
   push:
     branches: [x-download-pro]
   workflow_dispatch:
+concurrency:
+  group: xdownload-verification-${{ github.ref }}
+  cancel-in-progress: false
 permissions:
   contents: read
 jobs:
@@ -36,7 +39,19 @@ jobs:
               f.setparams((1, 2, 44100, 0, 'NONE', 'not compressed'))
               f.writeframes(b''.join(struct.pack('<h', int(12000*math.sin(2*math.pi*440*i/44100))) for i in range(88200)))
           PY
-      - run: gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace
+      - name: Build and test with bounded repository rate-limit retries
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            if gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace 2>&1 | tee "$RUNNER_TEMP/gradle-build.log"; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ] || ! grep -Eiq 'status code 429|Too Many Requests' "$RUNNER_TEMP/gradle-build.log"; then
+              exit 1
+            fi
+            sleep "$((attempt * 30))"
+          done
       - run: |
           mkdir -p candidate
           cp app/build/outputs/apk/debug/app-debug.apk candidate/XDownload-Pro.apk
@@ -84,7 +99,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        api: [30, 35]
+        api: [29, 30, 35]
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -116,7 +131,7 @@ jobs:
           path: candidate
       - uses: actions/upload-artifact@v4
         with:
-          name: XDownload-Pro-4.0-RC2-TESTED
+          name: XDownload-Pro-4.0-RC3-TESTED
           path: candidate/XDownload-Pro.apk
       - uses: actions/download-artifact@v4
         with:
@@ -124,5 +139,5 @@ jobs:
           path: phone
       - uses: actions/upload-artifact@v4
         with:
-          name: XDownload-Pro-4.0-RC2-ARM64-DEVICE-TEST-REQUIRED
+          name: XDownload-Pro-4.0-RC3-ARM64-DEVICE-TEST-REQUIRED
           path: phone/

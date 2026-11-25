@@ -41,3 +41,5 @@ RC2 mini-player and aggregate launcher widget candidates added; widget host rend
 RC2 runtime engine switches and partial localization added. Full localization, independently downloadable modules and controlled physical measurements against competitors remain open. Device script records startup/PSS and battery/thermal context only.
 
 RC2 adds compatibility conversion entry point and device decoder report, Arabic labels in legacy export, and hard LAN session expiry. Full native decoder coverage and real multi-device share verification remain open.
+
+RC3 introduces consent-based floating shortcut and foreground clipboard suggestion (not automatic clipboard read over unrelated apps), plus API29 emulator and rate-limit-only build retries. Verify on actual OPPO F11 and Huawei nova 7 (Android/EMUI variant), including overlay permission, focus, share, revoke/stop and lock-screen behavior. Final release remains blocked until exact commit tests and owner signing/device validation.
