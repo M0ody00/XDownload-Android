@@ -26,4 +26,35 @@ import android.content.*;import android.net.Uri;import androidx.test.core.app.Ac
  @Test public void scheduledQueueSurvivesViaSystemJob()throws Exception{Context c=InstrumentationRegistry.getInstrumentation().getTargetContext();Store store=Store.get(c);long now=System.currentTimeMillis();Store.Job j=new Store.Job("https://example.org/file",new HttpEngine.Info("schedule.bin","application/octet-stream",1,"","",false),"");j.state="scheduled";j.notBefore=now+600000;store.add(j);try{ScheduleService.arm(c);android.app.job.JobInfo job=c.getSystemService(android.app.job.JobScheduler.class).getPendingJob(ScheduleService.JOB);assertNotNull(job);assertTrue(job.isPersisted());assertTrue(ScheduleService.next(store,now)<=j.notBefore);}finally{store.remove(j);c.getSystemService(android.app.job.JobScheduler.class).cancel(ScheduleService.JOB);}}
  @Test public void audioStudioRealConversions()throws Exception{Context c=InstrumentationRegistry.getInstrumentation().getTargetContext();File in=File.createTempFile("studio-fixture-",".wav",c.getCacheDir());try{try{AudioStudioActivity.stage(new ByteArrayInputStream(new byte[0]),in);fail("Empty source must be rejected");}catch(IOException expected){assertTrue(expected.getMessage().contains("empty"));}try(InputStream input=InstrumentationRegistry.getInstrumentation().getContext().getAssets().open("sample.wav")){AudioStudioActivity.stage(input,in);}assertTrue(in.length()>44);for(String fmt:new String[]{"flac","wav","m4a","opus","aac","mp3"}){File out=File.createTempFile("studio-test-","."+fmt,c.getCacheDir());try{AudioStudioActivity.encode(c,in,out,fmt,128,"Original fixture","X Download",0.25,1.25);assertTrue(fmt,out.length()>44);android.media.MediaMetadataRetriever mm=new android.media.MediaMetadataRetriever();try{mm.setDataSource(out.getPath());String dur=mm.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION);if(dur!=null){long d=Long.parseLong(dur);assertTrue(fmt+" duration "+d,d>=700&&d<=1500);}}finally{mm.release();}}finally{out.delete();}}}finally{in.delete();}}
  @Test public void safeCacheCleanupOnlyRemovesKnownOldFiles()throws Exception{Context c=InstrumentationRegistry.getInstrumentation().getTargetContext();File dir=new File(c.getCacheDir(),"audit-test-"+java.util.UUID.randomUUID());assertTrue(dir.mkdirs());long now=System.currentTimeMillis();File old=new File(dir,"studio-in-old.tmp"),recent=new File(dir,"studio-in-recent.tmp"),unknown=new File(dir,"unrelated.tmp");try{for(File file:new File[]{old,recent,unknown})java.nio.file.Files.write(file.toPath(),new byte[]{1,2,3});assertTrue(old.setLastModified(now-StorageAudit.STALE-10000));assertTrue(unknown.setLastModified(now-StorageAudit.STALE-10000));assertEquals(3,StorageAudit.stale(dir,false,now));assertEquals(3,StorageAudit.stale(dir,true,now));assertFalse(old.exists());assertTrue(recent.exists());assertTrue(unknown.exists());assertEquals(6,StorageAudit.bytes(dir));assertTrue(StorageAudit.measure(c).apk>0);}finally{FileTools.deleteTree(dir);}}
+
+ @Test public void localPlayerPlaysSyntheticAudioAndRepeatPolicy()throws Exception{
+  assertEquals(1,LocalPlayerActivity.nextIndex(0,2,0,true));
+  assertEquals(-1,LocalPlayerActivity.nextIndex(1,2,0,true));
+  assertEquals(1,LocalPlayerActivity.nextIndex(1,2,1,true));
+  assertEquals(0,LocalPlayerActivity.nextIndex(1,2,2,true));
+  Context c=InstrumentationRegistry.getInstrumentation().getTargetContext();
+  ContentValues values=new ContentValues();
+  values.put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME,"xdownload-player-"+java.util.UUID.randomUUID()+".wav");
+  values.put(android.provider.MediaStore.MediaColumns.MIME_TYPE,"audio/wav");
+  values.put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH,android.os.Environment.DIRECTORY_DOWNLOADS+"/XDownloadPro/Test");
+  values.put(android.provider.MediaStore.MediaColumns.IS_PENDING,1);
+  Uri uri=c.getContentResolver().insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI,values);assertNotNull(uri);
+  Store.Job job=new Store.Job("https://example.invalid/local-test.wav",new HttpEngine.Info("local-test.wav","audio/wav",176400,"","",false),"");
+  try{
+   try(InputStream in=InstrumentationRegistry.getInstrumentation().getContext().getAssets().open("sample.wav");OutputStream out=c.getContentResolver().openOutputStream(uri,"w")){AudioStudioActivity.copy(in,out);}
+   ContentValues done=new ContentValues();done.put(android.provider.MediaStore.MediaColumns.IS_PENDING,0);assertEquals(1,c.getContentResolver().update(uri,done,null,null));
+   job.uri=uri.toString();job.state="complete";Store.get(c).add(job);assertTrue(LocalPlayerActivity.playable(job));
+   Intent intent=new Intent(c,LocalPlayerActivity.class).putExtra("job_id",job.id);
+   try(ActivityScenario<LocalPlayerActivity> scenario=ActivityScenario.launch(intent)){
+    AtomicBoolean prepared=new AtomicBoolean(false),playing=new AtomicBoolean(false);
+    long until=android.os.SystemClock.elapsedRealtime()+12000;
+    while(android.os.SystemClock.elapsedRealtime()<until&&!playing.get()){
+     scenario.onActivity(a->{if(a.ready&&a.video.getDuration()>=1800)prepared.set(true);if(a.ready&&a.video.isPlaying())playing.set(true);});
+     if(!playing.get())Thread.sleep(100);
+    }
+    assertTrue("Local WAV must prepare",prepared.get());assertTrue("Local WAV must play",playing.get());
+    scenario.moveToState(androidx.lifecycle.Lifecycle.State.CREATED);
+   }
+  }finally{Store.get(c).remove(job);c.getContentResolver().delete(uri,null,null);}
+ }
 }
